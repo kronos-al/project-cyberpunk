@@ -18,8 +18,13 @@ __*B̸̬͊̋̆̀̉o̷̯̻͝ă̴̟ ̸͓̟̼̝͓̃̅̈́͐s̷̨̺̬̒͜ò̴̹̣͠�
 5. [__*Mr. Robot*__](https://www.primevideo.com/-/pt/detail/0SJJSQE04USSW0CM5BMESSR1IG)
 
 ## Objetivos:
-
-## Regras:
+A bomba possui 5 módulos e o objetivo do jogador é desarmar:
+1. Senha de fábrica
+2. Ajuste de sintonização
+3. Fios Entrelaçados
+4. Fios Conectados
+5. Labirinto
+## Regras:   
 
 ## Personagens:
 
