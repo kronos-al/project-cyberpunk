@@ -1,4 +1,14 @@
-# Bomb.exe
+
+---
+
+<div align="center">
+
+# 💣 Bomb.exe
+
+</div>
+
+---
+
 ## Premissa:
 ### Ano 2149
 Você e seu parceiro fazem parte do **Esquadrão Antibombas da NeoCity**. Um dispositivo explosivo de tecnologia desconhecida foi localizado em uma escola durante um grande evento de jogos aberto ao público e não há tempo para evacuar o local. Trabalhem em equipe para desarmar os 5 módulos do dispositivo antes que o tempo acabe. Cada módulo exige um procedimento diferente e qualquer erro pode comprometer a missão.
@@ -27,7 +37,7 @@ Cada bomba possui um número de série exclusivo, que é gerado aleatoriamente n
 2. **Ajuste de sintonização:**
 O módulo simula um sistema de comunicação fora de sintonia, em que é exibida uma frequência de referência na tela, enquanto o jogador responsável pelo painel deve girar um potenciômetro até encontrar a frequência exata de desarme.
 4. **Fios Entrelaçados:**
-> 
+
 4. **Fios Conectados:**
 O módulo apresenta entre 3 e 5 fios. Os jogadores devem, utilizando as regras descritas no manual e o número de série da bomba, identificar e cortar o fio correto para desarmar o módulo.
 5. **Labirinto:**
