@@ -20,7 +20,7 @@ __*B̸̬͊̋̆̀̉o̷̯̻͝ă̴̟ ̸͓̟̼̝͓̃̅̈́͐s̷̨̺̬̒͜ò̴̹̣͠�
 ### Objetivos:
 Bomb.exe é um jogo cooperativo para dois jogadores, no qual a comunicação e o trabalho em equipe são essenciais para o sucesso da missão. O objetivo é desarmar uma bomba composta por cinco módulos independentes, em que cada módulo apresenta um mecanismo único e exige que os jogadores interpretem corretamente as instruções presentes no manual de desarme.
 
-> * Embora os módulos sigam um conjunto de regras, diversos elementos são gerados aleatoriamente a cada partida, tornando cada bomba única e aumentando o fator de rejogabilidade.
+> Embora os módulos sigam um conjunto de regras, diversos elementos são gerados aleatoriamente a cada partida, tornando cada bomba única e aumentando o fator de rejogabilidade.
 
 1. **Chave de Inicialização:**
 Cada bomba possui um número de série exclusivo, que é gerado aleatoriamente no início da partida. Utilizando as regras presentes no manual, os jogadores devem interpretar esse número de série para descobrir a senha correta e desbloquear o primeiro módulo.
@@ -29,14 +29,25 @@ O módulo simula um sistema de comunicação fora de sintonia, em que é exibida
 4. **Fios Entrelaçados:**
 > 
 4. **Fios Conectados:**
+O módulo apresenta entre 3 e 5 fios. Os jogadores devem, utilizando as regras descritas no manual e o número de série da bomba, identificar e cortar o fio correto para desarmar o módulo.
 5. **Labirinto:**
-### Regras:   
+O módulo apresenta um labirinto escolhido aleatoriamente e com uso das referências de objetivo exibidas na bomba e no manual, os jogadores devem identificar o labirinto correspondente e guiar o cursor até o objetivo, sem atravessar as paredes invisíveis.
 
-> 1. A bomba possui o tempo de desarme de 5 minutos.
+### Regras:      
+
+> 1. A bomba possui o tempo de desarme de **5 minutos**.
 
 > 2. Você deve desarmar a bomba antes que o cronômetro chegue a zero.
 
-> 3. O jogador responsável pelo manual não poderá ver a bomba, enquanto o jogador responsável por desarmar a bomba não pode ver o manual.
+> 3. O jogo termina imediatamente quando todos os módulos forem desarmados ou quando o cronômetro chegar a zero.
+
+> 4. O jogador responsável pelo manual não poderá ver a bomba, enquanto o jogador responsável por desarmar a bomba não pode ver o manual.
+
+> 5. Um módulo só é considerado desarmado quando o LED verde correspondente a ele é aceso
+
+> 6. Sempre que uma solução incorreta for executada, um LED vermelho de falha será aceso no painel da bomba.
+
+> 7. Ao acumular **3 falhas**, o dispositivo é imediatamente detonado, encerrando a partida.
 
 ### Personagens:
 
