@@ -60,6 +60,11 @@ O módulo apresenta um labirinto escolhido aleatoriamente e com uso das referên
 > 7. Ao acumular **3 falhas**, o dispositivo é imediatamente detonado, encerrando a partida.
 
 ### Personagens:
+**Operador da Bomba:**
+É o jogador responsável por visualizar e interagir com a bomba. Deve descrever seus componentes ao Especialista e executar corretamente as instruções recebidas para desarmá-la.
+
+**Especialista no Manual:**
+É o jogador responsável por consultar o manual de desarme. Com base nas informações fornecidas pelo operador, interpreta as regras e orienta, passo a passo, as ações necessárias para desarmar a bomba.
 
 ### Artefatos:
 
