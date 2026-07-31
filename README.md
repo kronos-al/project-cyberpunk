@@ -72,10 +72,10 @@ Tem acesso ao banco de dados da ANS, além das tecnologias e protocolos de desar
 
 ### Artefatos:
 
-- Dispositivo Explosivo Improvisado:
+- **Dispositivo Explosivo Improvisado**:
 É um objeto explosivo desconhecido, com 5 módulos independentes que podem ativar o explosivo com qualquer movimento errado, exigindo um conhecimento técnico e um procedimento específico para desarma-lo.
 
-- Terminal Tático da ANS:
+- **Terminal Tático da ANS**:
 É o notebook utilizado pelo Setor de Inteligência Tática da ANS, equipado com o ANS-SECURE OS, um sistema operacional desenvolvido para acesso a protocolos de desarme, diagramas técnicos e procedimentos operacionais necessários para interpretar cada módulo da bomba e orientar o operador durante a missão.
 
 ### Fontes de receita
