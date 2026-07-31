@@ -81,3 +81,5 @@ Tem acesso ao banco de dados da ANS, além das tecnologias e protocolos de desar
 É o notebook utilizado pelo Setor de Inteligência Tática da ANS, equipado com o ANS-SECURE OS, um sistema operacional desenvolvido para acesso a protocolos de desarme, diagramas técnicos e procedimentos operacionais necessários para interpretar cada módulo da bomba e orientar o operador durante a missão.
 
 ### Fontes de receita
+
+- **Venda do kit oficial**: Comercialização do kit completo contendo a bomba física e uma licença de ativação do ANS-SECURE OS. A chave permite o acesso ao aplicativo que simula o sistema operacional utilizado pelo Especialista em Inteligência Tática, sendo necessário para a experiência cooperativa completa.
