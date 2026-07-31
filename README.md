@@ -60,24 +60,22 @@ O módulo apresenta um labirinto escolhido aleatoriamente e com uso das referên
 > 7. Ao acumular **3 falhas**, o dispositivo é imediatamente detonado, encerrando a partida.
 
 ### Personagens:
-**Agentes da ANS**
+**Agentes da ANS:**
 
 Após a confirmação da ameaça, a melhor equipe da ANS (Agência Nacional de Segurança) é enviada ao local para neutralizar o dispositivo.
 
 1. **Especialista em Desarme de Explosivos (EDE):**
 Ele é treinado para agir em ambientes sob extrema pressão, identificando componentes e manipulando mecanismos de alta precisão, através da operação direta do dispositivo explosivo. Na missão principal ele deve descrever todas as informações sobre a bomba para o EIT, além de seguir todos os passos indicados por ele para o sucesso do objetivo.
 
-2.**Especialista em Inteligência Tática (EIT):**
+2. **Especialista em Inteligência Tática (EIT):**
 Tem acesso ao banco de dados da ANS, além das tecnologias e protocolos de desarme utilizados pela agência. Com as informações obtidas pelo EDE, o EIT deve indicar os passos necessários para desarmar o dispositivo explosivo com sucesso.
 
 ### Artefatos:
 
 - Dispositivo Explosivo Improvisado:
-
 É um objeto explosivo desconhecido, com 5 módulos independentes que podem ativar o explosivo com qualquer movimento errado, exigindo um conhecimento técnico e um procedimento específico para desarma-lo.
 
 - Terminal Tático da ANS:
-
 É o notebook utilizado pelo Setor de Inteligência Tática da ANS, equipado com o ANS-SECURE OS, um sistema operacional desenvolvido para acesso a protocolos de desarme, diagramas técnicos e procedimentos operacionais necessários para interpretar cada módulo da bomba e orientar o operador durante a missão.
 
 ### Fontes de receita
