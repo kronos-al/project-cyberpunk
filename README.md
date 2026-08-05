@@ -37,7 +37,7 @@ Cada bomba possui um número de série exclusivo, que é gerado aleatoriamente n
 2. **Ajuste de sintonização:**
 O módulo simula um sistema de comunicação fora de sintonia, em que é exibida uma frequência de referência na tela, enquanto o jogador responsável pelo painel deve girar um potenciômetro até encontrar a frequência exata de desarme.
 4. **Bússola de LEDs:**
-5.  O módulo apresenta um knob rotativo de 4 posições e um conjunto de 6 LEDs em diferentes estados, assim, o operador deve descrever a configuração dos LEDs ao especialista, que utilizará o manual para identificar a orientação correta do knob, para que o operador possa ajustá-lo para a posição indicada e pressionar o botão de confirmação para concluir o desarme.
+O módulo apresenta um knob rotativo de 4 posições e um conjunto de 6 LEDs em diferentes estados, assim, o operador deve descrever a configuração dos LEDs ao especialista, que utilizará o manual para identificar a orientação correta do knob, para que o operador possa ajustá-lo para a posição indicada e pressionar o botão de confirmação para concluir o desarme.
 4. **Fios Conectados:**
 O módulo apresenta entre 3 e 5 fios. Os jogadores devem, utilizando as regras descritas no manual e o número de série da bomba, identificar e cortar o fio correto para desarmar o módulo.
 5. **Labirinto:**
