@@ -1,0 +1,26 @@
+{
+  "name": "bomb_exe_server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "servidor.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node -r dotenv/config servidor.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "auth-bearer-parser": "^1.0.2",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "http": "^0.0.1-security",
+    "joi": "^18.2.8",
+    "mongodb": "3.7",
+    "mqtt": "^5.15.2",
+    "path": "^0.12.7",
+    "uuid": "^14.0.2",
+    "ws": "^8.21.3"
+  }
+}
