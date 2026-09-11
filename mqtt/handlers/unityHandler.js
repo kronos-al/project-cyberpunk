@@ -7,7 +7,7 @@ const { enviarEEsperarResposta } = require("../mqtt-request.js");
 
 async function handleUnityMessage(topic, dados, mqttClient) {
 
-    if (dados.estado === "cadastrar jogadores") {
+    if (dados.estado === "CADASTRAR_JOGADORES") {
         try {
             /*
             * 1. Validar a mensagem recebida
@@ -61,7 +61,7 @@ async function handleUnityMessage(topic, dados, mqttClient) {
             /*
             * 5. Verificar se a partida está no estado correto
             */
-            if (partida.estado !== "Adicionar Jogadores") {
+            if (partida.estado !== "ADICIONAR_JOGADORES") {
                 console.error(
                     `Partida ${idPartida} não está no estado "Adicionar Jogadores".`
                 );
@@ -82,11 +82,11 @@ async function handleUnityMessage(topic, dados, mqttClient) {
             const bloqueio = await db.collection("partidas").updateOne(
                 {
                     _id: idPartida,
-                    estado: "Adicionar Jogadores"
+                    estado: "ADICIONAR_JOGADORES"
                 },
                 {
                     $set: {
-                        estado: "Cadastrando Jogadores"
+                        estado: "CADASTRANDO_JOGADORES"
                     }
                 }
             );
@@ -108,14 +108,14 @@ async function handleUnityMessage(topic, dados, mqttClient) {
             await db.collection("partidas").updateOne(
                 {
                     _id: idPartida,
-                    estado: "Cadastrando Jogadores"
+                    estado: "CADASTRANDO_JOGADORES"
                 },
                 {
                     $set: {
                         "jogadores.EDE": value.dados.EDE,
                         "jogadores.EIT": value.dados.EIT,
 
-                        estado: "Aguardando Inicio da Partida"
+                        estado: "AGUARDANDO_INICIO_DA_PARTIDA"
                     }
                 }
             );
@@ -126,7 +126,7 @@ async function handleUnityMessage(topic, dados, mqttClient) {
                 `bombexe/${idPartida}/server/unity`,
 
                 {
-                    estado: "Aguardando Inicio da Partida",
+                    estado: "AGUARDANDO_INICIO_DA_PARTIDA",
                     dados: {
                         idPartida: idPartida
                     }
@@ -139,7 +139,7 @@ async function handleUnityMessage(topic, dados, mqttClient) {
                             `bombexe/${idPartida}/unity/server` &&
 
                         dadosRecebidos.estado ===
-                            "Aguardando Inicio da Partida" &&
+                            "AGUARDANDO_INICIO_DA_PARTIDA" &&
 
                         dadosRecebidos.dados?.idPartida ===
                             idPartida
@@ -155,7 +155,7 @@ async function handleUnityMessage(topic, dados, mqttClient) {
         
     }
 
-    if (dados.estado === "Começar Partida") {
+    if (dados.estado === "COMECAR_PARTIDA") {
         /*
         * 1. Validar a mensagem recebida
         */
@@ -209,9 +209,9 @@ async function handleUnityMessage(topic, dados, mqttClient) {
          /*
         * 5. Verificar se a partida está no estado correto
         */
-        if (partida.estado !== "Aguardando Inicio da Partida") {
+        if (partida.estado !== "AGUARDANDO_INICIO_DA_PARTIDA") {
             console.error(
-                `Partida ${idPartida} não está no estado "Aguardando Inicio da Partida".`
+                `Partida ${idPartida} não está no estado "AGUARDANDO_INICIO_DA_PARTIDA".`
             );
             return; 
         }
@@ -222,7 +222,7 @@ async function handleUnityMessage(topic, dados, mqttClient) {
             },
             {
                 $set: {
-                    estado: "Começar Partida"
+                    estado: "COMECAR_PARTIDA"
                 }
             }
         );
@@ -235,7 +235,7 @@ async function handleUnityMessage(topic, dados, mqttClient) {
                 `bombexe/${idPartida}/server/bomba`,
 
                 {
-                    estado: "Começar Partida",
+                    estado: "COMECAR_PARTIDA",
                     dados: {
                         idPartida: idPartida
                     }
@@ -248,7 +248,7 @@ async function handleUnityMessage(topic, dados, mqttClient) {
                             `bombexe/${idPartida}/bomba/server` &&
 
                         dadosRecebidos.estado ===
-                            "Em Partida" &&
+                            "EM_PARTIDA" &&
 
                         dadosRecebidos.dados?.idPartida ===
                             idPartida
@@ -267,7 +267,7 @@ async function handleUnityMessage(topic, dados, mqttClient) {
                 },
                 {
                     $set: {
-                        estado: "Em Partida",
+                        estado: "EM_PARTIDA",
                         startedAt: new Date()
                     }
                 }

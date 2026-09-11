@@ -47,9 +47,9 @@ router.post("/postAddPlayer", async (req, res) => {
              /*
             * 5. Verificar se a partida está no estado correto
             */
-            if (partida.estado !== "Aguardando Jogadores") {
+            if (partida.estado !== "AGUARDANDO_JOGADORES") {
                 console.error(
-                    `Partida ${idPartida} não está no estado "Aguardando Jogadores".`
+                    `Partida ${idPartida} não está no estado "AGUARDANDO_JOGADORES".`
                 );
                 return;
             }
@@ -74,7 +74,7 @@ router.post("/postAddPlayer", async (req, res) => {
                             `bombexe/${idPartida}/unity/server` &&
 
                         dadosRecebidos.estado ===
-                            "Adicionar Jogadores" &&
+                            "ADICIONAR_JOGADORES" &&
 
                         dadosRecebidos.dados?.idPartida ===
                             idPartida
@@ -97,7 +97,7 @@ router.post("/postAddPlayer", async (req, res) => {
                 { _id: idPartida },
                 {
                     $set: {
-                        estado: "Adicionar Jogadores"
+                        estado: "ADICIONAR_JOGADORES"
                     }
                 }
             );
@@ -108,7 +108,7 @@ router.post("/postAddPlayer", async (req, res) => {
 
             return res.status(200).json({
 
-                estado: "Adicionar Jogadores",
+                estado: "ADICIONAR_JOGADORES",
 
                 dados: {
                     idPartida: idPartida

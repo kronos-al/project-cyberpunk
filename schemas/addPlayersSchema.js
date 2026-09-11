@@ -2,7 +2,7 @@ const Joi = require("joi");
 
 const addPlayersSchema = Joi.object({
     estado: Joi.string()
-        .valid("Adicionar Jogadores")
+        .valid("ADICIONAR_JOGADORES")
         .required(),
 
     dados: Joi.object({

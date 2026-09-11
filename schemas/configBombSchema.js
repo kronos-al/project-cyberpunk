@@ -2,7 +2,7 @@ const Joi = require("joi");
 
 const configBombSchema = Joi.object({
     estado: Joi.string()
-        .valid("Aguardando Partida")
+        .valid("AGUARDANDO_PARTIDA")
         .required(),
 
     dados: Joi.object({
@@ -28,11 +28,11 @@ const configBombSchema = Joi.object({
 
                     cor: Joi.string()
                         .valid(
-                            "vermelho",
-                            "verde",
-                            "azul",
-                            "laranja",
-                            "marrom"
+                            "VERMELHO",
+                            "VERDE",
+                            "AZUL",
+                            "LARANJA",
+                            "MARROM"
                         )
                         .required()
                 })

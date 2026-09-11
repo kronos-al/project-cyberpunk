@@ -2,7 +2,7 @@ const Joi = require("joi");
 
 const comecarPartidaSchema = Joi.object({
     estado: Joi.string()
-        .valid("Começar Partida")
+        .valid("COMECAR_PARTIDA")
         .required(),
 
     dados: Joi.object({

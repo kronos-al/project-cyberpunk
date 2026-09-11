@@ -85,7 +85,7 @@ router.post("/postConfigBomb", async (req, res) => {
         // VERIFICAR ESTADO DA PARTIDA
         // ==========================================
 
-        if (partida.estado !== "Aguardando Partida") {
+        if (partida.estado !== "AGUARDANDO_PARTIDA") {
 
             return res.status(409).json({
                 erro: "A partida não está disponível para configuração da Bomba"
@@ -101,11 +101,11 @@ router.post("/postConfigBomb", async (req, res) => {
         const bloqueio = await db.collection("partidas").updateOne(
             {
                 _id: idPartida,
-                estado: "Aguardando Partida"
+                estado: "AGUARDANDO_PARTIDA"
             },
             {
                 $set: {
-                    estado: "Configurando Bomba"
+                    estado: "CONFIGURANDO_BOMBA"
                 }
             }
         );
@@ -137,7 +137,7 @@ router.post("/postConfigBomb", async (req, res) => {
                 `bombexe/${idPartida}/server/bomba`,
 
                 {
-                    estado: "Configurar Fios",
+                    estado: "CONFIGURAR_FIOS",
 
                     dados: {
                         idPartida: idPartida,
@@ -153,7 +153,7 @@ router.post("/postConfigBomb", async (req, res) => {
                             `bombexe/${idPartida}/bomba/server` &&
 
                         dadosRecebidos.estado ===
-                            "Aguardando Jogadores" &&
+                            "AGUARDANDO_JOGADORES" &&
 
                         dadosRecebidos.dados?.idPartida ===
                             idPartida
@@ -176,7 +176,7 @@ router.post("/postConfigBomb", async (req, res) => {
             await db.collection("partidas").updateOne(
                 {
                     _id: idPartida,
-                    estado: "Configurando Bomba"
+                    estado: "CONFIGURANDO_BOMBA"
                 },
                 {
                     $set: {
@@ -185,7 +185,7 @@ router.post("/postConfigBomb", async (req, res) => {
 
                         uuid: uuid,
 
-                        estado: "Aguardando Jogadores"
+                        estado: "AGUARDANDO_JOGADORES"
                     }
                 }
             );
@@ -200,11 +200,11 @@ router.post("/postConfigBomb", async (req, res) => {
             await db.collection("partidas").updateOne(
                 {
                     _id: idPartida,
-                    estado: "Configurando Bomba"
+                    estado: "CONFIGURANDO_BOMBA"
                 },
                 {
                     $set: {
-                        estado: "Aguardando Partida"
+                        estado: "AGUARDANDO_PARTIDA"
                     }
                 }
             );
@@ -219,7 +219,7 @@ router.post("/postConfigBomb", async (req, res) => {
 
         return res.status(200).json({
 
-            estado: "Aguardando Jogadores",
+            estado: "AGUARDANDO_JOGADORES",
 
             dados: {
                 idPartida: idPartida,

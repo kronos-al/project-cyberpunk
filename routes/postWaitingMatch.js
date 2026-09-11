@@ -21,7 +21,7 @@ router.post("/postWaitingMatch", async (req, res) => {
             _id: idPartida,
             uuid: null,
 
-            estado: "Aguardando Partida",
+            estado: "AGUARDANDO_PARTIDA",
 
             jogadores: {
                 EDE: {
@@ -95,7 +95,7 @@ router.post("/postWaitingMatch", async (req, res) => {
                 `bombexe/${idPartida}/server/bomba`,
 
             {
-                estado: "Aguardando Partida",
+                estado: "AGUARDANDO_PARTIDA",
                 dados: {
                     idPartida: idPartida
                 }
@@ -104,7 +104,7 @@ router.post("/postWaitingMatch", async (req, res) => {
             (topicRecebido, dados) => {
                 return (
                     topicRecebido === `bombexe/${idPartida}/bomba/server` &&
-                    dados.estado === "Aguardando Partida" &&
+                    dados.estado === "AGUARDANDO_PARTIDA" &&
                     dados.dados?.idPartida === idPartida
                 );
             }
@@ -136,7 +136,7 @@ router.post("/postWaitingMatch", async (req, res) => {
                 `bombexe/${idPartida}/server/unity`,
 
                 {
-                    estado: "Aguardando Partida",
+                    estado: "AGUARDANDO_PARTIDA",
                     dados: {
                         idPartida: idPartida
                     }
@@ -145,7 +145,7 @@ router.post("/postWaitingMatch", async (req, res) => {
                 (topicRecebido, dados) => {
                     return (
                         topicRecebido === `bombexe/${idPartida}/unity/server` &&
-                        dados.estado === "Aguardando Partida" &&
+                        dados.estado === "AGUARDANDO_PARTIDA" &&
                         dados.dados?.idPartida === idPartida
                     );
                 }

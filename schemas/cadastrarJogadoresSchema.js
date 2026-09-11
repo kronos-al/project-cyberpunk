@@ -2,7 +2,7 @@ const Joi = require("joi");
 
 const cadastrarJogadoresSchema = Joi.object({
     estado: Joi.string()
-        .valid("cadastrar jogadores")
+        .valid("CADASTRAR_JOGADORES")
         .required(),
 
     dados: Joi.object({
