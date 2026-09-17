@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Bomb.exe — manual de acesso e instruções para a experiência cooperativa de desarme de bomba." />
+  <title>BOMB.EXE // ACCESS TERMINAL</title>
+
+  <style>
+    :root {
+      --bg: #050708;
+      --bg-soft: #0b0f10;
+      --panel: rgba(8, 13, 14, 0.92);
+      --panel-2: rgba(11, 18, 19, 0.88);
+      --terminal: #8dff75;
+      --terminal-soft: rgba(141, 255, 117, 0.16);
+      --danger: #ff4d4d;
+      --warning: #ffbd57;
+      --text: #d7e4d8;
+      --muted: #7e8d80;
+      --line: rgba(141, 255, 117, 0.2);
+      --cyan: #68d7ff;
+      --shadow: 0 0 30px rgba(141, 255, 117, 0.06);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: "Courier New", Courier, monospace;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 50% 10%, rgba(141, 255, 117, 0.07), transparent 30%),
+        radial-gradient(circle at 90% 50%, rgba(104, 215, 255, 0.04), transparent 28%),
+        linear-gradient(180deg, #060809 0%, #030505 100%);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 50;
+      background:
+        repeating-linear-gradient(
+          to bottom,
+          rgba(255, 255, 255, 0.025) 0,
+          rgba(255, 255, 255, 0.025) 1px,
+          transparent 1px,
+          transparent 4px
+        );
+      mix-blend-mode: screen;
+      opacity: 0.28;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 49;
+      background:
+        radial-gradient(circle at center, transparent 48%, rgba(0, 0, 0, 0.68) 100%);
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .noise {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 51;
+      opacity: 0.055;
+      background-image:
+        radial-gradient(rgba(255,255,255,0.25) 0.8px, transparent 0.8px);
+      background-size: 5px 5px;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 22px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(3, 6, 7, 0.88);
+      backdrop-filter: blur(12px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      letter-spacing: 0.12em;
+    }
+
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--terminal);
+      color: var(--terminal);
+      font-size: 13px;
+      box-shadow: 0 0 16px rgba(141, 255, 117, 0.15);
+    }
+
+    .brand strong {
+      color: var(--terminal);
+      font-size: 14px;
+    }
+
+    .brand small {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .topbar nav {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .topbar nav a {
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      transition: color 180ms ease;
+    }
+
+    .topbar nav a:hover {
+      color: var(--terminal);
+    }
+
+    main {
+      position: relative;
+      z-index: 2;
+    }
+
+    .hero {
+      min-height: calc(100vh - 57px);
+      display: grid;
+      place-items: center;
+      padding: 48px 22px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-grid {
+      width: min(1150px, 100%);
+      display: grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      gap: 32px;
+      align-items: center;
+    }
+
+    .hero-copy {
+      max-width: 700px;
+    }
+
+    .status-line {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      background: rgba(141, 255, 117, 0.05);
+      color: var(--terminal);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      margin-bottom: 22px;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--terminal);
+      box-shadow: 0 0 12px var(--terminal);
+      animation: pulse 1.6s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.55; transform: scale(0.72); }
+    }
+
+    .hero h1 {
+      font-size: clamp(64px, 11vw, 144px);
+      line-height: 0.84;
+      color: #edf7ed;
+      letter-spacing: -0.07em;
+      text-shadow:
+        0 0 20px rgba(141,255,117,0.08),
+        7px 0 0 rgba(255, 0, 75, 0.06),
+        -6px 0 0 rgba(72, 210, 255, 0.05);
+    }
+
+    .hero h1 span {
+      color: var(--terminal);
+    }
+
+    .hero-subtitle {
+      margin-top: 22px;
+      max-width: 650px;
+      color: #a8b9aa;
+      font-size: 16px;
+      line-height: 1.8;
+    }
+
+    .typing {
+      margin-top: 22px;
+      color: var(--muted);
+      font-size: 12px;
+      min-height: 18px;
+    }
+
+    .typing::before {
+      content: "> ";
+      color: var(--terminal);
+    }
+
+    .hero-actions {
+      margin-top: 28px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-height: 46px;
+      padding: 0 18px;
+      border: 1px solid var(--terminal);
+      cursor: pointer;
+      background: var(--terminal);
+      color: #071008;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(141,255,117,0.14);
+    }
+
+    .btn.secondary {
+      background: transparent;
+      color: var(--terminal);
+    }
+
+    .btn.secondary:hover {
+      background: var(--terminal-soft);
+    }
+
+    .hero-visual {
+      min-height: 510px;
+      display: grid;
+      place-items: center;
+    }
+
+    .terminal-frame {
+      width: min(100%, 490px);
+      position: relative;
+      padding: 18px;
+      border: 1px solid var(--line);
+      background:
+        linear-gradient(180deg, rgba(13, 19, 19, 0.95), rgba(5, 9, 9, 0.97));
+      box-shadow: var(--shadow);
+      transform: rotate(1deg);
+    }
+
+    .terminal-frame::before {
+      content: "CAM_04 // EVIDENCE ROOM";
+      position: absolute;
+      top: -24px;
+      right: 8px;
+      color: var(--danger);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+    }
+
+    .terminal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 12px;
+      margin-bottom: 18px;
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .terminal-title {
+      color: var(--terminal);
+    }
+
+    .terminal-screen {
+      min-height: 340px;
+      padding: 20px;
+      border: 1px solid rgba(141,255,117,0.12);
+      background:
+        radial-gradient(circle at 50% 0%, rgba(141,255,117,0.06), transparent 40%),
+        #050807;
+    }
+
+    .terminal-screen .line {
+      color: #8aa08c;
+      font-size: 11px;
+      line-height: 1.85;
+    }
+
+    .terminal-screen .green {
+      color: var(--terminal);
+    }
+
+    .terminal-screen .red {
+      color: var(--danger);
+    }
+
+    .terminal-screen .cyan {
+      color: var(--cyan);
+    }
+
+    .bomb-svg {
+      width: 100%;
+      max-width: 330px;
+      margin: 18px auto 12px;
+      display: block;
+      filter: drop-shadow(0 0 14px rgba(141,255,117,0.05));
+    }
+
+    .section {
+      padding: 90px 22px;
+    }
+
+    .section-inner {
+      width: min(1150px, 100%);
+      margin: 0 auto;
+    }
+
+    .section-kicker {
+      color: var(--terminal);
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      margin-bottom: 10px;
+    }
+
+    .section h2 {
+      font-size: clamp(30px, 5vw, 54px);
+      line-height: 1;
+      margin-bottom: 16px;
+      color: #ebf4eb;
+      letter-spacing: -0.03em;
+    }
+
+    .section-intro {
+      max-width: 760px;
+      color: var(--muted);
+      line-height: 1.8;
+      font-size: 14px;
+      margin-bottom: 34px;
+    }
+
+    .lore {
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 28px 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+    }
+
+    .lore p {
+      color: #a8b5a9;
+      line-height: 1.9;
+      font-size: 14px;
+    }
+
+    .lore strong {
+      color: var(--terminal);
+      font-weight: normal;
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, var(--panel), var(--panel-2));
+      padding: 22px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::after {
+      content: "";
+      position: absolute;
+      width: 90px;
+      height: 90px;
+      right: -45px;
+      top: -45px;
+      border: 1px solid rgba(141,255,117,0.12);
+      transform: rotate(45deg);
+    }
+
+    .card h3 {
+      color: #e8f1e8;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    .card p {
+      color: var(--muted);
+      line-height: 1.75;
+      font-size: 13px;
+    }
+
+    .tag {
+      display: inline-block;
+      margin-bottom: 15px;
+      padding: 5px 8px;
+      border: 1px solid var(--line);
+      color: var(--terminal);
+      font-size: 9px;
+      letter-spacing: 0.1em;
+    }
+
+    .role-card {
+      min-height: 205px;
+    }
+
+    .steps {
+      display: grid;
+      gap: 12px;
+      margin-top: 28px;
+      counter-reset: step;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 54px 1fr;
+      gap: 18px;
+      align-items: start;
+      padding: 20px;
+      border: 1px solid var(--line);
+      background: rgba(8, 12, 13, 0.8);
+      counter-increment: step;
+    }
+
+    .step-index {
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--terminal);
+      color: var(--terminal);
+      font-size: 13px;
+    }
+
+    .step h3 {
+      color: #e3ede3;
+      margin-bottom: 7px;
+      font-size: 15px;
+    }
+
+    .step p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.75;
+    }
+
+    .danger-box {
+      margin-top: 28px;
+      padding: 20px;
+      border: 1px solid rgba(255, 77, 77, 0.35);
+      background: rgba(255, 77, 77, 0.045);
+    }
+
+    .danger-box strong {
+      color: var(--danger);
+      display: block;
+      margin-bottom: 8px;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+    }
+
+    .danger-box p {
+      color: #b6a2a2;
+      line-height: 1.75;
+      font-size: 13px;
+    }
+
+    .modules {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .module {
+      min-height: 180px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      background: #080d0d;
+    }
+
+    .module-code {
+      color: var(--warning);
+      font-size: 10px;
+      margin-bottom: 12px;
+    }
+
+    .module h3 {
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: #e7eee7;
+    }
+
+    .module p {
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 12px;
+    }
+
+    .access-zone {
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: 1fr 0.95fr;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .access-panel {
+      border: 1px solid var(--terminal);
+      background:
+        linear-gradient(180deg, rgba(141,255,117,0.08), rgba(141,255,117,0.015));
+      padding: 26px;
+      box-shadow: 0 0 26px rgba(141,255,117,0.05);
+    }
+
+    .access-panel h3 {
+      color: var(--terminal);
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+
+    .access-panel p {
+      color: #b4c2b5;
+      line-height: 1.8;
+      font-size: 13px;
+    }
+
+    .access-sequence {
+      margin-top: 20px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .access-sequence div {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #9aac9b;
+      font-size: 12px;
+    }
+
+    .access-sequence span {
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      color: var(--terminal);
+      font-size: 10px;
+    }
+
+    .cta {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 26px;
+      border: 1px dashed rgba(141,255,117,0.24);
+      background: rgba(2, 6, 6, 0.7);
+    }
+
+    .cta .small {
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      margin-bottom: 8px;
+    }
+
+    .cta h3 {
+      color: #edf5ed;
+      font-size: 28px;
+      margin-bottom: 12px;
+    }
+
+    .cta p {
+      color: var(--muted);
+      line-height: 1.75;
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
+
+    .cta a {
+      align-self: flex-start;
+    }
+
+    .footer {
+      border-top: 1px solid var(--line);
+      padding: 30px 22px 50px;
+      text-align: center;
+      color: #536156;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+    }
+
+    .footer .green {
+      color: var(--terminal);
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity 600ms ease, transform 600ms ease;
+    }
+
+    .reveal.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 960px) {
+      .hero-grid,
+      .access-zone,
+      .lore {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-visual {
+        min-height: unset;
+      }
+
+      .modules {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid-3 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .topbar {
+        position: relative;
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .hero {
+        padding-top: 34px;
+      }
+
+      .hero h1 {
+        font-size: 72px;
+      }
+
+      .hero-subtitle {
+        font-size: 14px;
+      }
+
+      .grid-2,
+      .modules {
+        grid-template-columns: 1fr;
+      }
+
+      .step {
+        grid-template-columns: 1fr;
+      }
+
+      .step-index {
+        width: 42px;
+        height: 42px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="noise"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="Bomb.exe início">
+      <div class="brand-mark">B.</div>
+      <div>
+        <strong>BOMB.EXE</strong><br />
+        <small>NEOCITY / 2149</small>
+      </div>
+    </a>
+
+    <nav aria-label="Navegação">
+      <a href="#sobre">SOBRE</a>
+      <a href="#jogo">COMO JOGAR</a>
+      <a href="#modulos">MÓDULOS</a>
+      <a href="#acesso">ACESSO</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <div class="status-line">
+            <span class="status-dot"></span>
+            SISTEMA // AGUARDANDO AGENTES
+          </div>
+
+          <h1>BOMB<span>.</span><br />EXE</h1>
+
+          <p class="hero-subtitle">
+            Uma experiência cooperativa de alta tensão. Dois agentes.
+            Informações incompletas. Uma bomba física. Cinco minutos para
+            descobrir como tudo funciona antes que o sistema chegue ao fim.
+          </p>
+
+          <div class="typing" id="typingLine">
+            transmissão segura iniciada...
+          </div>
+
+          <div class="hero-actions">
+            <a class="btn" href="#acesso">INICIAR PROTOCOLO</a>
+            <a class="btn secondary" href="#jogo">LER MANUAL</a>
+          </div>
+        </div>
+
+        <div class="hero-visual" aria-label="Ilustração estilizada de terminal e bomba">
+          <div class="terminal-frame">
+            <div class="terminal-header">
+              <span class="terminal-title">ANS-SECURE TERMINAL</span>
+              <span>REC_2149</span>
+            </div>
+
+            <div class="terminal-screen">
+              <div class="line green">[SYSTEM] CONNECTION ESTABLISHED</div>
+              <div class="line">[NODE] NEOCITY / EDE-EIT PROTOCOL</div>
+              <div class="line">[TASK] DISARM UNKNOWN DEVICE</div>
+              <div class="line red">[WARNING] 03 FAILURES = DETONATION</div>
+
+              <svg class="bomb-svg" viewBox="0 0 380 240" role="img" aria-label="Desenho estilizado da bomba física">
+                <defs>
+                  <filter id="glow">
+                    <feGaussianBlur stdDeviation="4" result="blur"/>
+                    <feMerge>
+                      <feMergeNode in="blur"/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
+                </defs>
+
+                <rect x="60" y="78" width="260" height="112" rx="10"
+                      fill="#0a0d0d" stroke="#6d8b72" stroke-width="3"/>
+                <rect x="88" y="99" width="95" height="48"
+                      fill="#061109" stroke="#8dff75" stroke-opacity="0.55"/>
+                <text x="101" y="119" fill="#8dff75" font-size="14" font-family="Courier New">T-04:31</text>
+                <text x="101" y="137" fill="#658a69" font-size="9" font-family="Courier New">LOCKED</text>
+
+                <circle cx="228" cy="123" r="18"
+                        fill="#111717" stroke="#68d7ff" stroke-width="3"/>
+                <circle cx="228" cy="123" r="6"
+                        fill="#68d7ff" filter="url(#glow)"/>
+
+                <rect x="252" y="101" width="44" height="44"
+                      fill="#111717" stroke="#8dff75" stroke-width="2"/>
+                <line x1="263" y1="112" x2="285" y2="112" stroke="#8dff75" stroke-width="2"/>
+                <line x1="263" y1="122" x2="285" y2="122" stroke="#8dff75" stroke-width="2"/>
+                <line x1="263" y1="132" x2="278" y2="132" stroke="#8dff75" stroke-width="2"/>
+
+                <path d="M85 78 C83 50 97 35 120 30"
+                      fill="none" stroke="#8b5a3b" stroke-width="7" stroke-linecap="round"/>
+                <path d="M120 30 C149 8 181 18 194 34"
+                      fill="none" stroke="#8b5a3b" stroke-width="7" stroke-linecap="round"/>
+
+                <rect x="115" y="158" width="145" height="15"
+                      rx="4" fill="#0c1310" stroke="#526c57"/>
+                <circle cx="132" cy="165" r="4" fill="#ff4d4d"/>
+                <circle cx="150" cy="165" r="4" fill="#ffbd57"/>
+                <circle cx="168" cy="165" r="4" fill="#8dff75"/>
+
+                <text x="75" y="216" fill="#6e8171" font-size="10" font-family="Courier New">
+                  PHYSICAL DEVICE // DO NOT TAMPER
+                </text>
+              </svg>
+
+              <div class="line cyan">> IDENTIFICATION REQUIRED</div>
+              <div class="line green">> AGENTS: READY FOR DEPLOYMENT</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section reveal" id="sobre">
+      <div class="section-inner">
+        <div class="section-kicker">01 // ARQUIVO CONFIDENCIAL</div>
+        <h2>O QUE É BOMB.EXE?</h2>
+        <p class="section-intro">
+          Bomb.exe é um jogo cooperativo assimétrico. A informação necessária
+          para resolver a bomba não está toda no mesmo lugar. Um agente manipula
+          o dispositivo físico enquanto o outro acessa o terminal e interpreta
+          as instruções. Comunicação precisa ser tratada como parte do jogo.
+        </p>
+
+        <div class="lore">
+          <p>
+            <strong>ANO 2149.</strong> A cidade de NeoCity opera sob uma rede de
+            vigilância e protocolos automatizados. Um dispositivo desconhecido
+            foi encontrado em uma sala isolada. O sistema o classificou como
+            ameaça e bloqueou o acesso.
+          </p>
+
+          <p>
+            Os agentes são enviados para recuperar o controle. No terminal está
+            o conhecimento. Na mesa está a bomba. O que um agente enxerga,
+            o outro não. Cada decisão precisa ser comunicada antes que o relógio
+            termine.
+          </p>
+        </div>
+
+        <div class="grid grid-2" style="margin-top: 16px;">
+          <article class="card role-card">
+            <span class="tag">AGENTE 01 // EDE</span>
+            <h3>Operador do dispositivo</h3>
+            <p>
+              Fica diante da bomba física. Executa as ações nos módulos, observa
+              luzes, botões, fios, displays e controles. Não recebe todas as
+              informações necessárias para interpretar os enigmas sozinho.
+            </p>
+          </article>
+
+          <article class="card role-card">
+            <span class="tag">AGENTE 02 // EIT</span>
+            <h3>Intérprete do terminal</h3>
+            <p>
+              Opera o manual digital em um computador Linux. Consulta o sistema
+              ANS-SECURE, interpreta as regras e orienta o EDE. Não deve tocar na
+              bomba para resolver os módulos.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section reveal" id="jogo">
+      <div class="section-inner">
+        <div class="section-kicker">02 // PROTOCOLO DE OPERAÇÃO</div>
+        <h2>COMO JOGAR</h2>
+        <p class="section-intro">
+          Antes de iniciar a partida, os dois agentes precisam estar no mesmo
+          local e preparados para trabalhar em conjunto.
+        </p>
+
+        <div class="steps">
+          <article class="step">
+            <div class="step-index">01</div>
+            <div>
+              <h3>Vá até o cenário da cena de crime</h3>
+              <p>
+                Procure a área preparada para a experiência. A bomba física
+                estará posicionada no ambiente junto com o computador utilizado
+                pelo agente EIT.
+              </p>
+            </div>
+          </article>
+
+          <article class="step">
+            <div class="step-index">02</div>
+            <div>
+              <h3>Faça o login no terminal</h3>
+              <p>
+                No computador da cena de crime, abra o acesso do Bomb.exe e
+                entre na partida. O terminal identifica a sessão e libera o
+                protocolo da equipe.
+              </p>
+            </div>
+          </article>
+
+          <article class="step">
+            <div class="step-index">03</div>
+            <div>
+              <h3>Definam quem será EDE e quem será EIT</h3>
+              <p>
+                O EDE permanece junto à bomba. O EIT fica responsável pelo
+                terminal e pelo manual digital. Não troquem de função no meio
+                de uma solução sem combinar.
+              </p>
+            </div>
+          </article>
+
+          <article class="step">
+            <div class="step-index">04</div>
+            <div>
+              <h3>Comuniquem cada ação</h3>
+              <p>
+                Digam em voz alta posições, cores, sequências, leituras e o que
+                está acontecendo no dispositivo. O jogo depende da comunicação
+                entre os dois agentes.
+              </p>
+            </div>
+          </article>
+
+          <article class="step">
+            <div class="step-index">05</div>
+            <div>
+              <h3>Resolva os cinco módulos</h3>
+              <p>
+                Cada partida apresenta uma combinação de desafios. Erros contam.
+                Três falhas fazem a bomba entrar em estado de detonação.
+              </p>
+            </div>
+          </article>
+        </div>
+
+        <div class="danger-box">
+          <strong>ATENÇÃO // PROTOCOLO DE FALHAS</strong>
+          <p>
+            A bomba possui limite de erros. Não tente ações no dispositivo sem
+            confirmar a regra correspondente com o outro agente. Neste jogo,
+            adivinhar é uma estratégia ruim.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section reveal" id="modulos">
+      <div class="section-inner">
+        <div class="section-kicker">03 // ARQUITETURA DO DISPOSITIVO</div>
+        <h2>OS MÓDULOS</h2>
+        <p class="section-intro">
+          A bomba é composta por cinco módulos principais. O conteúdo necessário
+          para resolver cada um deles é descoberto pela dupla durante a partida.
+        </p>
+
+        <div class="modules">
+          <article class="module">
+            <div class="module-code">MODULE_01</div>
+            <h3>CHAVE DE INICIALIZAÇÃO</h3>
+            <p>
+              Identifique a sequência correta para liberar o sistema de partida.
+            </p>
+          </article>
+
+          <article class="module">
+            <div class="module-code">MODULE_02</div>
+            <h3>AJUSTE DE SINTONIZAÇÃO</h3>
+            <p>
+              Ajuste o controle até eliminar o ruído indicado pelo dispositivo.
+            </p>
+          </article>
+
+          <article class="module">
+            <div class="module-code">MODULE_03</div>
+            <h3>BÚSSOLA DE LEDs</h3>
+            <p>
+              Interprete as indicações luminosas e determine a direção correta.
+            </p>
+          </article>
+
+          <article class="module">
+            <div class="module-code">MODULE_04</div>
+            <h3>FIOS CONECTADOS</h3>
+            <p>
+              A ordem, a posição e a cor dos fios determinam quais conexões são válidas.
+            </p>
+          </article>
+
+          <article class="module">
+            <div class="module-code">MODULE_05</div>
+            <h3>LABIRINTO</h3>
+            <p>
+              Conduza o objetivo pelo percurso sem encostar nas paredes invisíveis.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section reveal" id="acesso">
+      <div class="section-inner">
+        <div class="section-kicker">04 // AUTORIZAÇÃO DE ACESSO</div>
+        <h2>ENTRAR NA EXPERIÊNCIA</h2>
+        <p class="section-intro">
+          O jogo começa fisicamente antes de começar digitalmente. O terminal
+          existe para preparar os agentes e conectar a equipe à partida.
+        </p>
+
+        <div class="access-zone">
+          <div class="access-panel">
+            <h3>PROTOCOLO DE ENTRADA</h3>
+            <p>
+              Não tente acessar a partida de qualquer computador. Primeiro,
+              chegue ao cenário da cena de crime e localize o terminal preparado
+              para o Bomb.exe.
+            </p>
+
+            <div class="access-sequence">
+              <div>
+                <span>01</span>
+                localizar o cenário
+              </div>
+              <div>
+                <span>02</span>
+                posicionar a equipe
+              </div>
+              <div>
+                <span>03</span>
+                acessar o terminal
+              </div>
+              <div>
+                <span>04</span>
+                realizar o login
+              </div>
+              <div>
+                <span>05</span>
+                iniciar a partida
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span class="green">BOMB.EXE</span>
+    // SYSTEM INTERFACE
+    // NEO CITY 2149
+    // COOPERATIVE BOMB DISARM PROTOCOL
+  </footer>
+
+  <script>
+    const messages = [
+      "transmissão segura iniciada...",
+      "verificando integridade do dispositivo...",
+      "localização da cena de crime confirmada.",
+      "conexão ANS-SECURE estabelecida.",
+      "dois agentes necessários.",
+      "o relógio não vai esperar."
+    ];
+
+    const typingLine = document.getElementById("typingLine");
+    let messageIndex = 0;
+
+    function rotateMessage() {
+      typingLine.textContent = messages[messageIndex];
+      messageIndex = (messageIndex + 1) % messages.length;
+    }
+
+    setInterval(rotateMessage, 2600);
+    rotateMessage();
+
+    const reveals = document.querySelectorAll(".reveal");
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("show");
+          observer.unobserve(entry.target);
+        }
+      });
+    }, {
+      threshold: 0.12
+    });
+
+    reveals.forEach((element) => observer.observe(element));
+  </script>
+</body>
+</html>

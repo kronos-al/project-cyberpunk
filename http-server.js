@@ -9,16 +9,38 @@ const httpServer = createServer(app);
 app.use(express.json());
 app.use(authBearerParser());
 
+app.use(
+    "/",
+    express.static(
+        path.join(__dirname, "frontend", "home")
+    )
+);
 
-// app.use(
-//   "/admin",
-//   express.static(path.join(__dirname, "frontend", "administration"))
-// );
-// app.get("/admin", (req, res) => {
-//   res.sendFile(
-//     path.join(__dirname, "frontend", "administration", "index.html")
-//   );
-// });
+app.use(
+    "/admin",
+    express.static(
+        path.join(__dirname, "frontend", "admin")
+    )
+);
+
+app.use(
+    "/login",
+    express.static(
+        path.join(__dirname, "frontend", "login")
+    )
+);
+
+app.get("/", (req, res) => {
+    res.sendFile(
+        path.join(__dirname, "frontend", "home", "index.html")
+    );
+});
+
+app.get("/admin", (req, res) => {
+    res.sendFile(
+        path.join(__dirname, "frontend", "admin", "index.html")
+    );
+});
 
 
 module.exports = { app, httpServer};

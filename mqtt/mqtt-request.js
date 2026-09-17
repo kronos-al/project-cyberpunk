@@ -4,8 +4,8 @@ function enviarEEsperarResposta(
     topic,
     mensagem,
     verificarResposta,
-    timeout = 5000,
-    maxTentativas = 4
+    timeout = 10000,
+    maxTentativas = 5
 ) {
     return new Promise((resolve, reject) => {
 
