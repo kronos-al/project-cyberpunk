@@ -251,7 +251,12 @@ async function handleUnityMessage(topic, dados, mqttClient) {
                             "EM_PARTIDA" &&
 
                         dadosRecebidos.dados?.idPartida ===
-                            idPartida
+                            idPartida &&
+
+                        typeof dadosRecebidos.dados?.numeroDeSerie ===
+                            "string" &&
+
+                        dadosRecebidos.dados.numeroDeSerie.trim().length > 0
                     );
                 }
             );
@@ -268,7 +273,9 @@ async function handleUnityMessage(topic, dados, mqttClient) {
                 {
                     $set: {
                         estado: "EM_PARTIDA",
-                        startedAt: new Date()
+                        startedAt: new Date(),
+                        "bomba.numeroDeSerie":
+                            respostaBomba.dados.numeroDeSerie
                     }
                 }
             );

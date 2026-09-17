@@ -82,7 +82,7 @@ mqttClient.on("message", async (topic, message) => {
 
     } else if (origem === "bomba") {
 
-        await handleBombaMessage(topic, dados);
+        await handleBombaMessage(topic, dados, mqttClient);
 
     } else {
 
