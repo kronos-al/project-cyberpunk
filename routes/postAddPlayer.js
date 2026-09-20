@@ -51,7 +51,9 @@ router.post("/postAddPlayer", async (req, res) => {
                 console.error(
                     `Partida ${idPartida} não está no estado "AGUARDANDO_JOGADORES".`
                 );
-                return;
+                return res.status(404).json({
+                    erro: "Partida não encontrada"
+                });
             }
 
 
