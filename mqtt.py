@@ -1,6 +1,7 @@
 import os
 import ssl
 import paho.mqtt.client as mqtt
+from bomb_logic import on_mqtt_message
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -25,9 +26,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
 
 
 def on_message(client, userdata, message):
-    print(f"[MQTT] Mensagem recebida")
-    print(f"       Topic: {message.topic}")
-    print(f"       Payload: {message.payload.decode()}")
+    on_mqtt_message(client, message)
 
 
 def on_disconnect(client, userdata, disconnect_flags, reason_code, properties):
