@@ -13,7 +13,7 @@ def updateScreenSerieLCD(text:str, xCursor:int, yCursor:int, clearAll:bool, clea
     if clearAll:
         serieNumberLCD.clear()
     elif clearLine:
-        serieNumberLCD.cursor_pos = (0, yCursor)
+        serieNumberLCD.cursor_pos = (yCursor, 0)
         serieNumberLCD.write_string("                ")
-    serieNumberLCD.cursor_pos = (xCursor, yCursor)
+    serieNumberLCD.cursor_pos = (yCursor, xCursor)
     serieNumberLCD.write_string(text)
