@@ -1,6 +1,6 @@
 import json
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
-from physical_bomb_controller import updateScreen
+from physical_bomb_controller import updateScreenSerieLCD
 partida_estado = None
 partida_id = None
 partida_numeroDeFios = None
@@ -56,8 +56,8 @@ def on_mqtt_message(client, msg):
                 json.dumps(mensagem_resposta),
                 qos=1
             )
-            updateScreen("BOMB.EXE", 0, 0, True, False)
-            updateScreen("Aguardando Partida", 0, 0, False, False)
+            updateScreenSerieLCD("AGUARDANDO", 0, 0, True, False)
+            updateScreenSerieLCD("PARTIDA", 0, 1, False, False)
             print(f"Publicado em: {topico_resposta}")
             print(f"Mensagem: {mensagem_resposta}")
 
@@ -121,5 +121,6 @@ def on_mqtt_message(client, msg):
             partida_estado = "EM_PARTIDA"
             print(f"Publicado em: {topico_resposta}")
             print(f"Mensagem: {mensagem_resposta}")
-
+            updateScreenSerieLCD("CODIGO DE SERIE:", 0, 0, True, False)
+            updateScreenSerieLCD("A1C23E", 0, 1, False, False)
             # FAZER LOGICA DE PARTIDA AQUI

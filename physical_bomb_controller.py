@@ -9,7 +9,7 @@ serieNumberLCD = CharLCD(
 )
 
 
-def updateScreen(text:str, xCursor:int, yCursor:int, clearAll:bool, clearLine:bool):
+def updateScreenSerieLCD(text:str, xCursor:int, yCursor:int, clearAll:bool, clearLine:bool):
     if clearAll:
         serieNumberLCD.clear()
     elif clearLine:
