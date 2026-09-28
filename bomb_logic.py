@@ -1,16 +1,23 @@
 import json
+import string
+
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
 from physical_bomb_controller import updateScreenSerieLCD
+import random
 partida_estado = None
 partida_id = None
 partida_numeroDeFios = None
 partida_fios = None
+partida_serialCode = None
+partida_serialPassword = None
 
 def on_mqtt_message(client, msg):
     global partida_estado
     global partida_id
     global partida_numeroDeFios
     global partida_fios
+    global partida_serialCode
+    global partida_serialPassword
     payload_str = msg.payload.decode("utf-8")
     try:
         dados = json.loads(payload_str)
@@ -56,7 +63,7 @@ def on_mqtt_message(client, msg):
                 json.dumps(mensagem_resposta),
                 qos=1
             )
-            updateScreenSerieLCD("AGUARDANDO", 0, 0, True, False)
+            updateScreenSerieLCD("AGUARDANDO A", 0, 0, True, False)
             updateScreenSerieLCD("PARTIDA", 0, 1, False, False)
             print(f"Publicado em: {topico_resposta}")
             print(f"Mensagem: {mensagem_resposta}")
@@ -121,6 +128,74 @@ def on_mqtt_message(client, msg):
             partida_estado = "EM_PARTIDA"
             print(f"Publicado em: {topico_resposta}")
             print(f"Mensagem: {mensagem_resposta}")
+            partida_serialCode, partida_serialPassword = generateSerialAndPasswordCode()
             updateScreenSerieLCD("CODIGO DE SERIE:", 0, 0, True, False)
-            updateScreenSerieLCD("A1C23E", 0, 1, False, False)
+            updateScreenSerieLCD(partida_serialCode, 0, 1, False, False)
+            print("serialPassword", partida_serialPassword)
             # FAZER LOGICA DE PARTIDA AQUI
+
+
+
+
+
+def generateSerialAndPasswordCode():
+    # 1. Geração do Código de Série (LNLNLN)
+    firstLetter = random.choice(string.ascii_uppercase)
+    firstNumber = random.choice(string.digits)
+    secondLetter = random.choice(string.ascii_uppercase)
+    secondNumber = random.choice(string.digits)
+    thirdLetter = random.choice(string.ascii_uppercase)
+    thirdNumber = random.choice(string.digits)
+
+    serialCode = firstLetter + firstNumber + secondLetter + secondNumber + thirdLetter + thirdNumber
+
+    # --- Lógica do Password Code ---
+    letras = [firstLetter, secondLetter, thirdLetter]
+    numeros = [firstNumber, secondNumber, thirdNumber]
+    vogais_encontradas = [l for l in letras if l in "AEIOU"]
+    qtd_vogais = len(vogais_encontradas)
+
+    # PRIMEIRO DÍGITO (Análise das vogais)
+    if qtd_vogais == 0:
+        digito1 = "4"
+    elif qtd_vogais == 1:
+        if vogais_encontradas[0] in "AEI":
+            digito1 = "7"
+        else:  # O ou U
+            digito1 = "2"
+    else:  # Duas ou mais vogais
+        digito1 = "9"
+
+    # SEGUNDO DÍGITO (Último número do serial - thirdNumber)
+    # Nota: string.digits retorna texto, convertemos para int para testar se é par
+    if int(thirdNumber) % 2 == 0:
+        digito2 = "6"
+    else:
+        digito2 = "3"
+
+    # TERCEIRO DÍGITO (Repetição de números)
+    # set() remove duplicadas. Se tamanho for 3, todos são diferentes. Se for 1, todos são iguais.
+    qtd_numeros_unicos = len(set(numeros))
+    if qtd_numeros_unicos == 3:
+        digito3 = "8"  # Nenhum repetido
+    elif qtd_numeros_unicos == 2:
+        digito3 = "1"  # Exatamente dois iguais
+    else:
+        digito3 = "5"  # Três iguais
+
+    # QUARTO DÍGITO (Comparação alfabética entre a primeira e última letra)
+    if firstLetter == thirdLetter:
+        digito4 = "9"
+    elif firstLetter < thirdLetter:  # No Python, 'A' < 'B' (vem antes)
+        digito4 = "2"
+    else:
+        digito4 = "6"
+
+    # Juntando os 4 dígitos do Password Code
+    passwordCode = digito1 + digito2 + digito3 + digito4
+
+    return serialCode, passwordCode
+
+
+
+
