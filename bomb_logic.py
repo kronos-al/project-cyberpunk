@@ -1,5 +1,6 @@
 import json
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
+from physical_bomb_controller import updateScreen
 partida_estado = None
 partida_id = None
 partida_numeroDeFios = None
@@ -55,7 +56,8 @@ def on_mqtt_message(client, msg):
                 json.dumps(mensagem_resposta),
                 qos=1
             )
-
+            updateScreen("BOMB.EXE", 0, 0, True, False)
+            updateScreen("Aguardando Partida", 0, 0, False, False)
             print(f"Publicado em: {topico_resposta}")
             print(f"Mensagem: {mensagem_resposta}")
 
