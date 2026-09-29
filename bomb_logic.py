@@ -1,23 +1,44 @@
 import json
 import string
+import time
+import threading
+import random
 
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
-from physical_bomb_controller import updateScreenSerieLCD
-import random
-partida_estado = None
-partida_id = None
-partida_numeroDeFios = None
-partida_fios = None
-partida_serialCode = None
-partida_serialPassword = None
+#from physical_bomb_controller import updateScreenSerieLCD
 
+
+class Partida:
+    def __init__(self):
+        self.estado = "AGUARDANDO_PARTIDA"
+        self.id = None
+
+        self.falhas = 0
+
+        self.numeroDeFios = 0
+        self.fios = []
+
+        self.serialCode = None
+        self.serialPassword = None
+
+        self.tempoBomba = 300
+        self.tempoBombaFormatado = "05:00"
+
+        self.puzzle1 = False
+        self.puzzle2 = False
+        self.puzzle3 = False
+        self.puzzle4 = False
+        self.puzzle5 = False
+
+        self.vitoria = False
+        self.derrota = False
+
+        self.timer_ativo = False
+        self.loop_ativo = False
+
+partida = Partida()
 def on_mqtt_message(client, msg):
-    global partida_estado
-    global partida_id
-    global partida_numeroDeFios
-    global partida_fios
-    global partida_serialCode
-    global partida_serialPassword
+    global partida
     payload_str = msg.payload.decode("utf-8")
     try:
         dados = json.loads(payload_str)
@@ -43,18 +64,21 @@ def on_mqtt_message(client, msg):
                 print("Erro: JSON não corresponde ao Schema esperado!")
                 return
 
-            partida_estado = estado
-            partida_id = int(dados["dados"]["idPartida"])
+            partida = Partida()
+
+            partida.estado = estado
+            partida.id = int(dados["dados"]["idPartida"])
+
             # ========================================
             # Responde para a partida
             # ========================================
 
-            topico_resposta = f"bombexe/{partida_id}/bomba/server"
+            topico_resposta = f"bombexe/{partida.id}/bomba/server"
 
             mensagem_resposta = {
                 "estado": "AGUARDANDO_PARTIDA",
                 "dados": {
-                    "idPartida": partida_id
+                    "idPartida": partida.id
                 }
             }
 
@@ -63,13 +87,13 @@ def on_mqtt_message(client, msg):
                 json.dumps(mensagem_resposta),
                 qos=1
             )
-            updateScreenSerieLCD("AGUARDANDO A", 0, 0, True, False)
-            updateScreenSerieLCD("PARTIDA", 0, 1, False, False)
+#            updateScreenSerieLCD("AGUARDANDO A", 0, 0, True, False)
+#            updateScreenSerieLCD("PARTIDA", 0, 1, False, False)
             print(f"Publicado em: {topico_resposta}")
             print(f"Mensagem: {mensagem_resposta}")
 
         case "CONFIGURAR_FIOS":
-            if partida_estado != "AGUARDANDO_PARTIDA":
+            if partida.estado != "AGUARDANDO_PARTIDA":
                 print("Partida não está no estado de configurar fios")
                 return
             try:
@@ -77,17 +101,17 @@ def on_mqtt_message(client, msg):
             except Exception:
                 print("Erro: JSON não corresponde ao Schema esperado!")
                 return
-            if partida_id != int(dados["dados"]["idPartida"]):
+            if partida.id != int(dados["dados"]["idPartida"]):
                 print("Partida inválida")
                 return
-            partida_numeroDeFios = int(dados["dados"]["numeroDeFios"])
-            partida_fios = dados["dados"]["fios"]
+            partida.numeroDeFios = int(dados["dados"]["numeroDeFios"])
+            partida.fios = dados["dados"]["fios"]
 
-            topico_resposta = f"bombexe/{partida_id}/bomba/server"
+            topico_resposta = f"bombexe/{partida.id}/bomba/server"
             mensagem_resposta = {
                 "estado": "AGUARDANDO_JOGADORES",
                 "dados": {
-                    "idPartida": partida_id
+                    "idPartida": partida.id
                 }
             }
 
@@ -96,27 +120,69 @@ def on_mqtt_message(client, msg):
                 json.dumps(mensagem_resposta),
                 qos=1
             )
-            partida_estado = "AGUARDANDO_JOGADORES"
+            partida.estado = "AGUARDANDO_JOGADORES"
             print(f"Publicado em: {topico_resposta}")
             print(f"Mensagem: {mensagem_resposta}")
+
         case "COMECAR_PARTIDA":
-            if partida_estado != "AGUARDANDO_JOGADORES":
+            if partida.estado != "AGUARDANDO_JOGADORES":
                 print("Partida não está no estado de iniciar partidas")
                 return
+
             try:
                 validado = ComecarPartidaSchema.model_validate(dados)
             except Exception:
                 print("Erro: JSON não corresponde ao Schema esperado!")
                 return
-            if partida_id != int(dados["dados"]["idPartida"]):
+
+            if partida.id != int(dados["dados"]["idPartida"]):
                 print("Partida inválida")
                 return
 
-            topico_resposta = f"bombexe/{partida_id}/bomba/server"
+            # ==========================================
+            # CONFIGURAÇÃO DA PARTIDA
+            # ==========================================
+
+            partida.serialCode, partida.serialPassword = generateSerialAndPasswordCode()
+
+            print("serialPassword", partida.serialPassword)
+
+            # ==========================================
+            # INICIAR TEMPO
+            # ==========================================
+
+            threading.Thread(
+                target=iniciarContagemBomba,
+                daemon=True
+            ).start()
+
+            # ==========================================
+            # ALTERAR ESTADO
+            # ==========================================
+
+            partida.estado = "EM_PARTIDA"
+
+            # ==========================================
+            # INICIAR LOOP DA PARTIDA
+            # ==========================================
+
+            threading.Thread(
+                target=loopPartida,
+                args=(client,),
+                daemon=True
+            ).start()
+
+            # ==========================================
+            # AVISAR QUE A PARTIDA COMEÇOU
+            # ==========================================
+
+            topico_resposta = f"bombexe/{partida.id}/bomba/server"
+
             mensagem_resposta = {
                 "estado": "EM_PARTIDA",
                 "dados": {
-                    "idPartida": partida_id
+                    "idPartida": partida.id,
+                    "numeroDeSerie": partida.serialCode
                 }
             }
 
@@ -125,18 +191,9 @@ def on_mqtt_message(client, msg):
                 json.dumps(mensagem_resposta),
                 qos=1
             )
-            partida_estado = "EM_PARTIDA"
+
             print(f"Publicado em: {topico_resposta}")
             print(f"Mensagem: {mensagem_resposta}")
-            partida_serialCode, partida_serialPassword = generateSerialAndPasswordCode()
-            updateScreenSerieLCD("CODIGO DE SERIE:", 0, 0, True, False)
-            updateScreenSerieLCD(partida_serialCode, 0, 1, False, False)
-            print("serialPassword", partida_serialPassword)
-            # FAZER LOGICA DE PARTIDA AQUI
-
-
-
-
 
 def generateSerialAndPasswordCode():
     # 1. Geração do Código de Série (LNLNLN)
@@ -196,6 +253,98 @@ def generateSerialAndPasswordCode():
 
     return serialCode, passwordCode
 
+def iniciarContagemBomba():
+    partida.tempoBomba = 300
+    partida.timer_ativo = True
+
+    while partida.tempoBomba > 0 and partida.timer_ativo:
+
+        minutos = partida.tempoBomba // 60
+        segundos = partida.tempoBomba % 60
+
+        partida.tempoBombaFormatado = f"{minutos:02d}:{segundos:02d}"
+
+        print("Tempo da bomba:", partida.tempoBombaFormatado)
+
+        time.sleep(1)
+
+        partida.tempoBomba -= 1
+
+    partida.tempoBomba = 0
+    partida.tempoBombaFormatado = "00:00"
+    partida.timer_ativo = False
+
+    print("TEMPO ESGOTADO!")
+
+def loopPartida(client):
+
+    partida.loop_ativo = True
+
+    print("Loop da partida iniciado.")
+
+    while partida.loop_ativo:
+
+        # ==========================================
+        # VERIFICAR TEMPO
+        # ==========================================
+
+        if partida.tempoBomba <= 0:
+
+            partida.derrota = True
+
+            print("TEMPO ESGOTADO!")
+            print("DERROTA!")
+
+            partida.estado = "DERROTA"
+
+            partida.loop_ativo = False
+            break
 
 
+        # ==========================================
+        # VERIFICAR PUZZLES
+        # ==========================================
 
+        # Puzzle 1
+        if partida.puzzle1:
+            print("Puzzle 1 concluído!")
+
+
+        # Puzzle 2
+        if partida.puzzle2:
+            print("Puzzle 2 concluído!")
+
+
+        # Puzzle 3
+        if partida.puzzle3:
+            print("Puzzle 3 concluído!")
+
+
+        # ==========================================
+        # VERIFICAR VITÓRIA
+        # ==========================================
+
+        if (
+            partida.puzzle1
+            and partida.puzzle2
+            and partida.puzzle3
+            and partida.puzzle4
+            and partida.puzzle5
+        ):
+            partida.vitoria = True
+            partida.estado = "VITORIA"
+
+            print("TODOS OS PUZZLES CONCLUÍDOS!")
+            print("VITÓRIA!")
+
+            partida.loop_ativo = False
+            break
+
+
+        # ==========================================
+        # AGUARDAR PRÓXIMA VERIFICAÇÃO
+        # ==========================================
+
+        time.sleep(0.1)
+
+    print("Loop da partida finalizado.")
