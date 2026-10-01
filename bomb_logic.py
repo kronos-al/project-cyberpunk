@@ -4,8 +4,65 @@ import time
 import threading
 import random
 
+from dataclasses import dataclass
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
-#from physical_bomb_controller import updateScreenSerieLCD
+from physical_bomb_controller import updateScreenSerieLCD
+
+@dataclass
+class LED:
+    numero: int
+    ligado: bool
+
+CONFIGURACOES_LED = {
+
+    # 0° - configuração 1
+    "0_A": [
+        LED(0, False), LED(1, False), LED(2, True),  LED(3, False), LED(4, True),
+        LED(5, True),  LED(6, True),  LED(7, True),  LED(8, True),  LED(9, False)
+    ],
+
+    # 0° - configuração 2
+     "0_B": [
+        LED(0, True),  LED(1, False), LED(2, True),  LED(3, False), LED(4, True),
+        LED(5, False), LED(6, True),  LED(7, True),  LED(8, False), LED(9, True)
+    ],
+
+    # 180° - configuração 1
+    "180_A": [
+        LED(0, False), LED(1, True),  LED(2, True),  LED(3, False), LED(4, False),
+        LED(5, True),  LED(6, True),  LED(7, True),  LED(8, True),  LED(9, False)
+    ],
+
+    # 180° - configuração 2
+    "180_B": [
+        LED(0, True),  LED(1, False), LED(2, True),  LED(3, False), LED(4, True),
+        LED(5, False), LED(6, True),  LED(7, False), LED(8, False), LED(9, False)
+    ],
+
+    # 270° - configuração 1
+    "270_A": [
+        LED(0, False), LED(1, False), LED(2, False), LED(3, False), LED(4, True),
+        LED(5, True),  LED(6, False), LED(7, False), LED(8, True),  LED(9, True)
+    ],
+
+    # 270° - configuração 2
+    "270_B": [
+        LED(0, False), LED(1, False), LED(2, False), LED(3, False), LED(4, True),
+        LED(5, False), LED(6, False), LED(7, False), LED(8, True),  LED(9, True)
+    ],
+
+    # 90° - configuração 1
+    "90_A": [
+        LED(0, True),  LED(1, False), LED(2, True),  LED(3, True),  LED(4, True),
+        LED(5, True),  LED(6, True),  LED(7, True),  LED(8, False), LED(9, True)
+    ],
+
+     # 90° - configuração 2
+    "90_B": [
+        LED(0, True),  LED(1, False), LED(2, True),  LED(3, True),  LED(4, False),
+        LED(5, True),  LED(6, True),  LED(7, True),  LED(8, False), LED(9, True)
+    ]
+}
 
 
 class Partida:
@@ -17,6 +74,10 @@ class Partida:
 
         self.numeroDeFios = 0
         self.fios = []
+
+        self.chosenLEDs= []
+        self.chosenLEDsButtonPosition = None
+
 
         self.serialCode = None
         self.serialPassword = None
@@ -87,8 +148,8 @@ def on_mqtt_message(client, msg):
                 json.dumps(mensagem_resposta),
                 qos=1
             )
-#            updateScreenSerieLCD("AGUARDANDO A", 0, 0, True, False)
-#            updateScreenSerieLCD("PARTIDA", 0, 1, False, False)
+            updateScreenSerieLCD("AGUARDANDO A", 0, 0, True, False)
+            updateScreenSerieLCD("PARTIDA", 0, 1, False, False)
             print(f"Publicado em: {topico_resposta}")
             print(f"Mensagem: {mensagem_resposta}")
 
@@ -146,6 +207,16 @@ def on_mqtt_message(client, msg):
             partida.serialCode, partida.serialPassword = generateSerialAndPasswordCode()
 
             print("serialPassword", partida.serialPassword)
+
+            # Escolhe aleatoriamente uma das 8 configurações
+            partida.chosenLEDsButtonPosition, partida.chosenLEDs = random.choice(
+                list(CONFIGURACOES_LED.items())
+            )
+
+            print("Configuração escolhida:", partida.chosenLEDsButtonPosition)
+
+            for led in partida.chosenLEDs:
+                print(f"LED {led.numero}: {'LIGADO' if led.ligado else 'DESLIGADO'}")
 
             # ==========================================
             # INICIAR TEMPO

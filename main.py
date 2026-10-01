@@ -1,7 +1,9 @@
+
 from mqtt import conectar
 
 
 def main():
+
     print("================================")
     print("        BOMB.EXE - BOMBA")
     print("================================")
@@ -11,7 +13,6 @@ def main():
     print("[BOMB.EXE] Aguardando mensagens...")
 
     mqtt_client.loop_forever()
-
 
 if __name__ == "__main__":
     main()
