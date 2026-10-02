@@ -3,10 +3,13 @@ import string
 import time
 import threading
 import random
+import pygame
 
 from dataclasses import dataclass
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
-from physical_bomb_controller import updateScreenSerieLCD
+#from physical_bomb_controller import updateScreenSerieLCD
+
+
 
 @dataclass
 class LED:
@@ -98,6 +101,13 @@ class Partida:
         self.loop_ativo = False
 
 partida = Partida()
+
+pygame.mixer.init()
+
+beepBomb = pygame.mixer.Sound(
+    "sounds/beep_bomb.mp3"
+)
+
 def on_mqtt_message(client, msg):
     global partida
     payload_str = msg.payload.decode("utf-8")
@@ -148,8 +158,8 @@ def on_mqtt_message(client, msg):
                 json.dumps(mensagem_resposta),
                 qos=1
             )
-            updateScreenSerieLCD("AGUARDANDO A", 0, 0, True, False)
-            updateScreenSerieLCD("PARTIDA", 0, 1, False, False)
+#            updateScreenSerieLCD("AGUARDANDO A", 0, 0, True, False)
+#            updateScreenSerieLCD("PARTIDA", 0, 1, False, False)
             print(f"Publicado em: {topico_resposta}")
             print(f"Mensagem: {mensagem_resposta}")
 
@@ -243,6 +253,10 @@ def on_mqtt_message(client, msg):
                 daemon=True
             ).start()
 
+            threading.Thread(
+                target=iniciarBeepBomba,
+                daemon=True
+            ).start()
             # ==========================================
             # AVISAR QUE A PARTIDA COMEÇOU
             # ==========================================
@@ -325,8 +339,10 @@ def generateSerialAndPasswordCode():
     return serialCode, passwordCode
 
 def iniciarContagemBomba():
-    partida.tempoBomba = 300
+
+    partida.tempoBomba = 50
     partida.timer_ativo = True
+
 
     while partida.tempoBomba > 0 and partida.timer_ativo:
 
@@ -346,6 +362,75 @@ def iniciarContagemBomba():
     partida.timer_ativo = False
 
     print("TEMPO ESGOTADO!")
+
+def iniciarBeepBomba():
+
+    while partida.timer_ativo:
+
+        tempo = partida.tempoBomba
+
+        if tempo <= 0:
+            break
+
+        # ==========================================
+        # VELOCIDADE DO BEEP
+        # ==========================================
+
+        if tempo > 40:
+
+            # Mais de 40 segundos
+            numeroBeeps = 1
+        elif tempo > 35:
+
+            numeroBeeps = 1.2
+        elif tempo > 30:
+
+            numeroBeeps = 1.3
+
+        elif tempo > 25:
+
+            # 40 até 21 segundos
+            numeroBeeps = 1.5
+
+        elif tempo > 20:
+
+            # 40 até 21 segundos
+            numeroBeeps = 1.7
+
+        elif tempo > 15:
+
+            # 20 até 11 segundos
+            numeroBeeps = 2
+
+        elif tempo > 10:
+
+            # 20 até 11 segundos
+            numeroBeeps = 2.5
+
+        elif tempo > 6:
+
+            # 10 até 4 segundos
+            numeroBeeps = 3
+
+        elif tempo > 2:
+
+            # 10 até 4 segundos
+            numeroBeeps = 7
+
+        else:
+
+            # Últimos 3 segundos
+            numeroBeeps = 10
+
+        # ==========================================
+        # DIVIDE OS BEEPS IGUALMENTE
+        # ==========================================
+
+        intervalo = 1.0 / numeroBeeps
+
+        beepBomb.play()
+
+        time.sleep(intervalo)
 
 def loopPartida(client):
 
