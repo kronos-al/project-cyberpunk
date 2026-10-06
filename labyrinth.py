@@ -1,6 +1,7 @@
 import os
 import pygame
 import math
+import random
 
 # ==========================================
 # CONFIGURAÇÃO
@@ -22,10 +23,6 @@ CELL_STEP = 18
 GRID_OFFSET_X = 15
 GRID_OFFSET_Y = 15
 
-# ==========================================
-# POSIÇÃO INICIAL DO JOGADOR
-# ==========================================
-
 PLAYER_START = {
     1: (3, 2),
     2: (3, 3),
@@ -35,125 +32,100 @@ PLAYER_START = {
     6: (4, 4)
 }
 
-# ==========================================
-# INICIAR PYGAME
-# ==========================================
-
-pygame.init()
-
-screen = pygame.display.set_mode(
-    (0, 0),
-    pygame.FULLSCREEN
-)
-
-pygame.display.set_caption(
-    "BOMB.EXE - Labirinto"
-)
-
+animationSpeed = 0.006
+animationAmount = 0.04
+duracaoAnimacao = 1200
 
 # ==========================================
-# TELA DO JOGO
+# ESTADO GLOBAL
 # ==========================================
 
-gameScreen = pygame.Surface(
-    (WIDTH, HEIGHT)
-)
+screen = None
+gameScreen = None
 
-
-# ==========================================
-# CARREGAR BACKGROUND
-# ==========================================
-
-background = pygame.image.load(
-    os.path.join(
-        ASSETS_PATH,
-        "Background.png"
-    )
-).convert_alpha()
-
-# ==========================================
-# CARREGAR OBJETIVOS
-# ==========================================
-
+background = None
 objectives = []
-
-for i in range(1, 7):
-
-    objective = pygame.image.load(
-        os.path.join(
-            ASSETS_PATH,
-            f"Objectives/Objective{i}.png"
-        )
-    ).convert_alpha()
-
-    objectives.append(objective)
-
-
-# ==========================================
-# CARREGAR MAPAS DE PAREDES
-# ==========================================
-
 walls = []
+player = None
+moveSound = None
+wallSound = None
 
-for i in range(1, 7):
+chosenObjectiveNumber = None
+chosenObjective = None
+chosenWall = None
 
-    wall = pygame.image.load(
-        os.path.join(
-            ASSETS_PATH,
-            f"Walls/Wall{i}.png"
-        )
+playerStart = None
+playerPosition = None
+playerDirection = "cima"
+
+objetivos = []
+animacaoInicio = None
+
+partidaAtual = None
+partidaAtiva = False
+running = False
+
+
+# ==========================================
+# INICIALIZAR PYGAME E CARREGAR RECURSOS
+# ==========================================
+
+def iniciarJogo():
+    global screen, gameScreen
+    global background, objectives, walls
+    global player, moveSound, wallSound
+
+    pygame.init()
+    pygame.mixer.init()
+
+    screen = pygame.display.set_mode(
+        (0, 0),
+        pygame.FULLSCREEN
+    )
+
+    pygame.display.set_caption("BOMB.EXE - Labirinto")
+
+    gameScreen = pygame.Surface((WIDTH, HEIGHT))
+
+    background = pygame.image.load(
+        os.path.join(ASSETS_PATH, "Background.png")
     ).convert_alpha()
 
-    walls.append(wall)
+    objectives = []
 
-# ==========================================
-# CARREGAR JOGADOR
-# ==========================================
+    for i in range(1, 7):
+        objective = pygame.image.load(
+            os.path.join(
+                ASSETS_PATH,
+                f"Objectives/Objective{i}.png"
+            )
+        ).convert_alpha()
 
-player = pygame.image.load(
-    os.path.join(
-        ASSETS_PATH,
-        "Player.png"
+        objectives.append(objective)
+
+    walls = []
+
+    for i in range(1, 7):
+        wall = pygame.image.load(
+            os.path.join(
+                ASSETS_PATH,
+                f"Walls/Wall{i}.png"
+            )
+        ).convert_alpha()
+
+        walls.append(wall)
+
+    player = pygame.image.load(
+        os.path.join(ASSETS_PATH, "Player.png")
+    ).convert_alpha()
+
+    moveSound = pygame.mixer.Sound(
+        os.path.join(ASSETS_PATH, "move.mp3")
     )
-).convert_alpha()
 
-moveSound = pygame.mixer.Sound(
-    os.path.join(
-        ASSETS_PATH,
-        "move.mp3"
+    wallSound = pygame.mixer.Sound(
+        os.path.join(ASSETS_PATH, "wall.mp3")
     )
-)
-
-wallSound = pygame.mixer.Sound(
-    os.path.join(
-        ASSETS_PATH,
-        "wall.mp3"
-    )
-)
-
-
-# ==========================================
-# ESCOLHER OBJETIVO
-# ==========================================
-
-import random
-
-chosenObjectiveNumber = random.randint(1, 6)
-
-chosenObjective = objectives[
-    chosenObjectiveNumber - 1
-]
-
-# Mapa de colisão do objetivo escolhido
-chosenWall = walls[
-    chosenObjectiveNumber - 1
-]
-
-playerStart = PLAYER_START[
-    chosenObjectiveNumber
-]
-playerPosition = list(playerStart)
-playerDirection = "cima"
 
 
 # ==========================================
@@ -161,58 +133,43 @@ playerDirection = "cima"
 # ==========================================
 
 def detectarObjetivos(image):
-
     yellowPixels = []
 
     for y in range(HEIGHT):
         for x in range(WIDTH):
-
             r, g, b, a = image.get_at((x, y))
 
             if r > 180 and g > 150 and b < 100:
                 yellowPixels.append((x, y))
 
-    # --------------------------------------
-    # Agrupar pixels conectados
-    # --------------------------------------
-
     pixels = set(yellowPixels)
     grupos = []
 
     while pixels:
-
         inicio = pixels.pop()
         grupo = [inicio]
         fila = [inicio]
 
         while fila:
-
             x, y = fila.pop()
 
             for dx in (-1, 0, 1):
                 for dy in (-1, 0, 1):
-
                     if dx == 0 and dy == 0:
                         continue
 
                     vizinho = (x + dx, y + dy)
 
                     if vizinho in pixels:
-
                         pixels.remove(vizinho)
                         fila.append(vizinho)
                         grupo.append(vizinho)
 
         grupos.append(grupo)
 
-    # --------------------------------------
-    # Converter grupos para células
-    # --------------------------------------
-
-    objetivos = []
+    objetivosEncontrados = []
 
     for grupo in grupos:
-
         mediaX = sum(x for x, y in grupo) / len(grupo)
         mediaY = sum(y for x, y in grupo) / len(grupo)
 
@@ -225,32 +182,45 @@ def detectarObjetivos(image):
         )
 
         if 0 <= linha < GRID_Y and 0 <= coluna < GRID_X:
+            objetivosEncontrados.append((linha, coluna))
 
-            objetivos.append(
-                (linha, coluna)
-            )
+    return objetivosEncontrados
 
-    return objetivos
 
-objetivos = detectarObjetivos(chosenObjective)
-puzzleResolvido = False
-animacaoInicio = None
-duracaoAnimacao = 1200  # 1,2 segundos
+# ==========================================
+# INICIAR / REINICIAR PARTIDA
+# ==========================================
 
-print(
-    "Labirinto escolhido:",
-    chosenObjectiveNumber
-)
+def iniciarPartida(partida):
+    global partidaAtual, partidaAtiva
+    global chosenObjectiveNumber, chosenObjective, chosenWall
+    global playerStart, playerPosition, playerDirection
+    global objetivos, animacaoInicio
 
-print(
-    "Player começa em:",
-    playerStart
-)
+    if screen is None:
+        iniciarJogo()
 
-print(
-    "Objetivos:",
-    objetivos
-)
+    partidaAtual = partida
+
+    chosenObjectiveNumber = random.randint(1, 6)
+
+    chosenObjective = objectives[chosenObjectiveNumber - 1]
+    chosenWall = walls[chosenObjectiveNumber - 1]
+
+    playerStart = PLAYER_START[chosenObjectiveNumber]
+    playerPosition = list(playerStart)
+    playerDirection = "cima"
+
+    objetivos = detectarObjetivos(chosenObjective)
+
+    partida.puzzle5 = False
+    animacaoInicio = None
+
+    partidaAtiva = True
+
+    print("Labirinto escolhido:", chosenObjectiveNumber)
+    print("Player começa em:", playerStart)
+    print("Objetivos:", objetivos)
 
 
 # ==========================================
@@ -258,8 +228,6 @@ print(
 # ==========================================
 
 def temParede(linhaAtual, colunaAtual, linhaNova, colunaNova):
-
-    # Centro da célula atual
     xAtual = (
         GRID_OFFSET_X
         + colunaAtual * CELL_STEP
@@ -272,7 +240,6 @@ def temParede(linhaAtual, colunaAtual, linhaNova, colunaNova):
         + CELL_HEIGHT // 2
     )
 
-    # Centro da próxima célula
     xNovo = (
         GRID_OFFSET_X
         + colunaNova * CELL_STEP
@@ -285,14 +252,12 @@ def temParede(linhaAtual, colunaAtual, linhaNova, colunaNova):
         + CELL_HEIGHT // 2
     )
 
-    # Verificar os pixels entre as duas células
     distancia = max(
         abs(xNovo - xAtual),
         abs(yNovo - yAtual)
     )
 
     for i in range(1, distancia):
-
         x = round(
             xAtual + (xNovo - xAtual) * i / distancia
         )
@@ -303,303 +268,199 @@ def temParede(linhaAtual, colunaAtual, linhaNova, colunaNova):
 
         r, g, b, a = chosenWall.get_at((x, y))
 
-        # Pixels brancos representam paredes
         if a > 0 and r > 180 and g > 180 and b > 180:
             return True
 
     return False
 
-def moverPlayer(direcao):
 
-    if puzzleResolvido:
+def resetPartida():
+    global partidaAtiva
+    partidaAtiva = False
+
+# ==========================================
+# MOVIMENTAR JOGADOR
+# ==========================================
+
+def moverPlayer(direcao):
+    if partidaAtual.puzzle5:
         return
 
     linha, coluna = playerPosition
 
     if direcao == "cima":
         linha -= 1
-
     elif direcao == "baixo":
         linha += 1
-
     elif direcao == "esquerda":
         coluna -= 1
-
     elif direcao == "direita":
         coluna += 1
 
-
-
-    # --------------------------------------
-    # Movimento válido
-    # --------------------------------------
-
     if 0 <= linha < GRID_Y and 0 <= coluna < GRID_X:
-
         if not temParede(
             playerPosition[0],
             playerPosition[1],
             linha,
             coluna
         ):
-
             playerPosition[0] = linha
             playerPosition[1] = coluna
-
             moveSound.play()
-
         else:
-
             wallSound.play()
-
-    # --------------------------------------
-    # Fora do tabuleiro
-    # --------------------------------------
-
     else:
-
         wallSound.play()
 
-animationSpeed = 0.006
-animationAmount = 0.04
+
 # ==========================================
-# LOOP
+# LOOP PRINCIPAL
 # ==========================================
 
-running = True
+def executarJogo():
+    global running, partidaAtiva
+    global playerDirection, animacaoInicio
 
-while running:
+    if screen is None:
+        iniciarJogo()
 
-    for event in pygame.event.get():
+    running = True
+    partidaAtiva = False
 
-        if event.type == pygame.QUIT:
-            running = False
+    clock = pygame.time.Clock()
 
-        if event.type == pygame.KEYDOWN:
-
-            if event.key == pygame.K_ESCAPE:
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
                 running = False
 
-            if event.key == pygame.K_UP:
-                moverPlayer("cima")
-                playerDirection = "cima"
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
 
-            if event.key == pygame.K_DOWN:
-                moverPlayer("baixo")
-                playerDirection = "baixo"
+                if (
+                    partidaAtiva
+                    and partidaAtual is not None
+                    and partidaAtual.falhas <= 3
+                ):
+                    if event.key == pygame.K_UP:
+                        moverPlayer("cima")
+                        playerDirection = "cima"
 
-            if event.key == pygame.K_LEFT:
-                moverPlayer("esquerda")
-                playerDirection = "esquerda"
+                    elif event.key == pygame.K_DOWN:
+                        moverPlayer("baixo")
+                        playerDirection = "baixo"
 
-            if event.key == pygame.K_RIGHT:
-                moverPlayer("direita")
-                playerDirection = "direita"
+                    elif event.key == pygame.K_LEFT:
+                        moverPlayer("esquerda")
+                        playerDirection = "esquerda"
 
-            if event.key == pygame.K_RETURN:
+                    elif event.key == pygame.K_RIGHT:
+                        moverPlayer("direita")
+                        playerDirection = "direita"
 
-                if not puzzleResolvido and tuple(playerPosition) in objetivos:
+                    elif event.key == pygame.K_RETURN:
+                        if (
+                            not partidaAtual.puzzle5
+                            and tuple(playerPosition) in objetivos
+                        ):
+                            partidaAtual.puzzle5 = True
+                            animacaoInicio = pygame.time.get_ticks()
+                            print("PUZZLE RESOLVIDO!")
 
-                    puzzleResolvido = True
-                    animacaoInicio = pygame.time.get_ticks()
+                        elif not partidaAtual.puzzle5:
+                            print("Você não está em um objetivo!")
 
-                    print("PUZZLE RESOLVIDO!")
+        if partidaAtiva and partidaAtual is not None and partidaAtual.falhas <= 3:
+            gameScreen.blit(background, (0, 0))
 
-                elif not puzzleResolvido:
+            if playerDirection == "cima":
+                playerImage = player
+            elif playerDirection == "baixo":
+                playerImage = pygame.transform.rotate(player, 180)
+            elif playerDirection == "esquerda":
+                playerImage = pygame.transform.rotate(player, 90)
+            else:
+                playerImage = pygame.transform.rotate(player, -90)
 
-                    print("Você não está em um objetivo!")
+            tempoAtual = pygame.time.get_ticks()
 
+            scale = 1 + math.sin(
+                tempoAtual * animationSpeed
+            ) * animationAmount
 
+            fadeAlpha = 0
 
+            if partidaAtual.puzzle5:
+                tempoDecorrido = tempoAtual - animacaoInicio
 
-    # --------------------------------------
-    # Desenhar no tamanho original
-    # --------------------------------------
+                progresso = min(
+                    tempoDecorrido / duracaoAnimacao,
+                    1
+                )
 
-    gameScreen.blit(
-        background,
-        (0, 0)
-    )
+                progressoSuave = (
+                    progresso * progresso
+                    * (3 - 2 * progresso)
+                )
 
+                scale *= 1 - progressoSuave
+                fadeAlpha = int(progressoSuave * 255)
 
-    # --------------------------------------
-    # Direção do jogador
-    # --------------------------------------
+            if scale > 0.01:
+                animatedPlayer = pygame.transform.scale_by(
+                    playerImage,
+                    scale
+                )
 
-    if playerDirection == "cima":
+                playerX = (
+                    GRID_OFFSET_X
+                    + playerPosition[1] * CELL_STEP
+                    + (CELL_WIDTH - animatedPlayer.get_width()) // 2
+                )
 
-        playerImage = player
+                playerY = (
+                    GRID_OFFSET_Y
+                    + playerPosition[0] * CELL_STEP
+                    + (CELL_HEIGHT - animatedPlayer.get_height()) // 2
+                )
 
-    elif playerDirection == "baixo":
+                gameScreen.blit(animatedPlayer, (playerX, playerY))
 
-        playerImage = pygame.transform.rotate(
-            player,
-            180
-        )
+            gameScreen.blit(chosenObjective, (0, 0))
 
-    elif playerDirection == "esquerda":
+            if partidaAtual.puzzle5:
+                blackOverlay = pygame.Surface((WIDTH, HEIGHT))
+                blackOverlay.fill((0, 0, 0))
+                blackOverlay.set_alpha(fadeAlpha)
+                gameScreen.blit(blackOverlay, (0, 0))
 
-        playerImage = pygame.transform.rotate(
-            player,
-            90
-        )
+            screenWidth, screenHeight = screen.get_size()
 
-    elif playerDirection == "direita":
+            escalaTela = min(
+                screenWidth / WIDTH,
+                screenHeight / HEIGHT
+            )
 
-        playerImage = pygame.transform.rotate(
-            player,
-            -90
-        )
+            newWidth = int(WIDTH * escalaTela)
+            newHeight = int(HEIGHT * escalaTela)
 
+            scaledScreen = pygame.transform.scale(
+                gameScreen,
+                (newWidth, newHeight)
+            )
 
-    # --------------------------------------
-    # ANIMAÇÃO DO JOGADOR E CONCLUSÃO
-    # --------------------------------------
+            screen.fill((0, 0, 0))
 
-    time = pygame.time.get_ticks()
+            x = (screenWidth - newWidth) // 2
+            y = (screenHeight - newHeight) // 2
 
-    # Pulsação normal do jogador
-    scale = 1 + math.sin(
-        time * animationSpeed
-    ) * animationAmount
+            screen.blit(scaledScreen, (x, y))
 
-    # Valores padrão
-    progresso = 0
-    fadeAlpha = 0
+        else:
+            screen.fill((0, 0, 0))
 
-    if puzzleResolvido:
+        pygame.display.flip()
+        clock.tick(60)
 
-        tempoDecorrido = time - animacaoInicio
-
-        progresso = min(
-            tempoDecorrido / duracaoAnimacao,
-            1
-        )
-
-        # Suavizar a animação com Smoothstep
-        progressoSuave = (
-            progresso * progresso
-            * (3 - 2 * progresso)
-        )
-
-        # Diminuir o jogador até desaparecer
-        scale *= 1 - progressoSuave
-
-        # Escurecer a tela progressivamente
-        fadeAlpha = int(
-            progressoSuave * 255
-        )
-
-    # Não desenhar quando já desapareceu
-    if scale > 0.01:
-
-        animatedPlayer = pygame.transform.scale_by(
-            playerImage,
-            scale
-        )
-
-        playerX = (
-            GRID_OFFSET_X
-            + playerPosition[1] * CELL_STEP
-            + (CELL_WIDTH - animatedPlayer.get_width()) // 2
-        )
-
-        playerY = (
-            GRID_OFFSET_Y
-            + playerPosition[0] * CELL_STEP
-            + (CELL_HEIGHT - animatedPlayer.get_height()) // 2
-        )
-
-        gameScreen.blit(
-            animatedPlayer,
-            (playerX, playerY)
-        )
-    # --------------------------------------
-    # Posição do jogador
-    # --------------------------------------
-
-    playerX = (
-            GRID_OFFSET_X
-            + playerPosition[1] * CELL_STEP
-            + (CELL_WIDTH - animatedPlayer.get_width()) // 2
-    )
-
-    playerY = (
-            GRID_OFFSET_Y
-            + playerPosition[0] * CELL_STEP
-            + (CELL_HEIGHT - animatedPlayer.get_height()) // 2
-    )
-
-    gameScreen.blit(
-        animatedPlayer,
-        (playerX, playerY)
-    )
-
-    gameScreen.blit(
-        chosenObjective,
-        (0, 0)
-    )
-    # --------------------------------------
-    # FADE PARA PRETO
-    # --------------------------------------
-
-    if puzzleResolvido:
-
-        blackOverlay = pygame.Surface(
-            (WIDTH, HEIGHT)
-        )
-
-        blackOverlay.fill((0, 0, 0))
-        blackOverlay.set_alpha(fadeAlpha)
-
-        gameScreen.blit(
-            blackOverlay,
-            (0, 0)
-        )
-    # --------------------------------------
-    # Escalar mantendo proporção
-    # --------------------------------------
-
-    screenWidth, screenHeight = screen.get_size()
-
-    scale = min(
-        screenWidth / WIDTH,
-        screenHeight / HEIGHT
-    )
-
-    newWidth = int(WIDTH * scale)
-    newHeight = int(HEIGHT * scale)
-
-    scaledScreen = pygame.transform.scale(
-        gameScreen,
-        (newWidth, newHeight)
-    )
-
-    # --------------------------------------
-    # Fundo das bordas
-    # --------------------------------------
-
-    screen.fill(
-        (0, 0, 0)
-    )
-
-    # --------------------------------------
-    # Centralizar
-    # --------------------------------------
-
-    x = (screenWidth - newWidth) // 2
-    y = (screenHeight - newHeight) // 2
-
-    screen.blit(
-        scaledScreen,
-        (x, y)
-    )
-
-    pygame.display.flip()
-
-
-# ==========================================
-# FINALIZAR
-# ==========================================
-
-pygame.quit()
+    pygame.quit()

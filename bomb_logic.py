@@ -4,6 +4,7 @@ import time
 import threading
 import random
 import pygame
+import labyrinth
 
 from dataclasses import dataclass
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
@@ -140,6 +141,8 @@ def on_mqtt_message(client, msg):
             partida.estado = estado
             partida.id = int(dados["dados"]["idPartida"])
 
+            labyrinth.resetPartida()
+
             # ========================================
             # Responde para a partida
             # ========================================
@@ -257,6 +260,8 @@ def on_mqtt_message(client, msg):
                 target=iniciarBeepBomba,
                 daemon=True
             ).start()
+
+            labyrinth.iniciarPartida(partida)
             # ==========================================
             # AVISAR QUE A PARTIDA COMEÇOU
             # ==========================================
@@ -472,7 +477,7 @@ def loopPartida(client):
 
 
         # Puzzle 3
-        if partida.puzzle3:
+        if partida.puzzle5:
             print("Puzzle 3 concluído!")
 
 
