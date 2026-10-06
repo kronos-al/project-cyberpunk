@@ -760,7 +760,7 @@
 
     const state = {
       idPartida: null,
-      numeroDeFios: 5,
+      numeroDeFios: 3,
       fios: {
         1: null,
         2: null,
@@ -862,7 +862,7 @@
 
         resetSession(idPartida);
         log(`Partida #${idPartida} criada.`, "good");
-        log("Configuração de fios liberada // selecione exatamente o número de fios informado.");
+        log("Configuração de fios liberada // escolha de 3 a 5 posições entre as 5 disponíveis.");
       } catch (error) {
         log(`FALHA AO CRIAR PARTIDA: ${error.message}`, "bad");
       } finally {
@@ -905,9 +905,20 @@
           button.type = "button";
           button.className = `color-btn ${color.className}${selectedColor === color.id ? " selected" : ""}`;
           button.textContent = color.label;
-          button.disabled = !active;
+          button.disabled = false;
           button.addEventListener("click", () => {
-            if (!active) return;
+            // Selecionar uma cor tambem ativa a posicao automaticamente.
+            if (!state.posicoesAtivas.has(position)) {
+              const targetCount = Number(wireCount.value);
+
+              if (state.posicoesAtivas.size >= targetCount) {
+                log(`LIMITE // a partida esta configurada para ${targetCount} fios.`, "warn");
+                return;
+              }
+
+              state.posicoesAtivas.add(position);
+            }
+
             state.fios[position] = color.id;
             renderWireEditor();
             updateConfigButton();
@@ -935,12 +946,11 @@
         state.fios[position] = null;
       } else {
         if (state.posicoesAtivas.size >= targetCount) {
-          log(`LIMITE // a partida está configurada para ${targetCount} fios.`, "warn");
+          log(`LIMITE // a partida esta configurada para ${targetCount} fios.`, "warn");
           return;
         }
 
         state.posicoesAtivas.add(position);
-        state.fios[position] = null;
       }
 
       renderWireEditor();
@@ -1013,7 +1023,7 @@
       const payload = buildConfigPayload();
 
       if (!payload) {
-        log("CONFIGURAÇÃO INVÁLIDA // selecione exatamente o número de fios e uma cor para cada um.", "warn");
+        log("CONFIGURACAO INVALIDA // escolha exatamente 3, 4 ou 5 posicoes e defina uma cor para cada fio ativo.", "warn");
         return;
       }
 
