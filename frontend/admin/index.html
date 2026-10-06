@@ -768,6 +768,7 @@
         4: null,
         5: null
       },
+      posicoesAtivas: new Set(),
       configStageVisible: false,
       playersStageVisible: false
     };
@@ -829,6 +830,7 @@
       state.idPartida = Number(idPartida);
       state.numeroDeFios = Number(wireCount.value);
       state.fios = { 1: null, 2: null, 3: null, 4: null, 5: null };
+      state.posicoesAtivas = new Set();
       state.configStageVisible = true;
       state.playersStageVisible = false;
 
@@ -869,14 +871,16 @@
     }
 
     function getActivePositions() {
-      return POSITIONS.filter(position => state.fios[position] !== null);
+      return POSITIONS.filter(position => state.posicoesAtivas.has(position));
     }
 
     function renderWireEditor() {
       wireEditor.innerHTML = "";
 
       for (const position of POSITIONS) {
-        const active = state.fios[position] !== null;
+        const active = state.posicoesAtivas.has(position);
+        const selectedColor = state.fios[position];
+
         const row = document.createElement("div");
         row.className = `wire-row${active ? " active" : ""}`;
 
@@ -890,7 +894,7 @@
         const wireLine = document.createElement("div");
         wireLine.className = `wire-line${active ? "" : "empty"}`;
         wireLine.style.background = active
-          ? colorToGradient(state.fios[position])
+          ? colorToGradient(selectedColor)
           : "#0a0e0e";
 
         const buttons = document.createElement("div");
@@ -899,7 +903,7 @@
         COLORS.forEach(color => {
           const button = document.createElement("button");
           button.type = "button";
-          button.className = `color-btn ${color.className}${state.fios[position] === color.id ? " selected" : ""}`;
+          button.className = `color-btn ${color.className}${selectedColor === color.id ? " selected" : ""}`;
           button.textContent = color.label;
           button.disabled = !active;
           button.addEventListener("click", () => {
@@ -924,34 +928,23 @@
     }
 
     function togglePosition(position) {
-      const activeCount = getActivePositions().length;
       const targetCount = Number(wireCount.value);
 
-      if (state.fios[position] !== null) {
+      if (state.posicoesAtivas.has(position)) {
+        state.posicoesAtivas.delete(position);
         state.fios[position] = null;
-        renderWireEditor();
-        updateConfigButton();
-        return;
+      } else {
+        if (state.posicoesAtivas.size >= targetCount) {
+          log(`LIMITE // a partida está configurada para ${targetCount} fios.`, "warn");
+          return;
+        }
+
+        state.posicoesAtivas.add(position);
+        state.fios[position] = null;
       }
 
-      if (activeCount >= targetCount) {
-        log(`LIMITE // a partida está configurada para ${targetCount} fios.`, "warn");
-        return;
-      }
-
-      state.fios[position] = null;
-      // null representa posição livre; precisamos de um marcador para fio sem cor.
-      state.fios[position] = "__SEM_COR__";
       renderWireEditor();
       updateConfigButton();
-    }
-
-    function normalizePositionMarker() {
-      for (const position of POSITIONS) {
-        if (state.fios[position] === "__SEM_COR__") {
-          state.fios[position] = null;
-        }
-      }
     }
 
     function colorToGradient(color) {
@@ -965,24 +958,26 @@
       return colors[color] || "#121818";
     }
 
-    function getSelectedCount() {
-      return POSITIONS.filter(position => {
-        const value = state.fios[position];
-        return value !== null && value !== "__SEM_COR__";
-      }).length;
+    function getOccupiedCount() {
+      return state.posicoesAtivas.size;
     }
 
-    function getOccupiedCount() {
-      return POSITIONS.filter(position => state.fios[position] !== null).length;
+    function getColoredCount() {
+      return getActivePositions().filter(position =>
+        COLORS.some(color => color.id === state.fios[position])
+      ).length;
     }
 
     function buildConfigPayload() {
       const numeroDeFios = Number(wireCount.value);
-      const occupiedPositions = POSITIONS.filter(position => state.fios[position] !== null);
+      const occupiedPositions = getActivePositions();
 
-      if (!state.idPartida) return null;
+      if (state.idPartida === null) return null;
+      if (numeroDeFios < 3 || numeroDeFios > 5) return null;
       if (occupiedPositions.length !== numeroDeFios) return null;
-      if (occupiedPositions.some(position => !COLORS.some(color => color.id === state.fios[position]))) return null;
+      if (occupiedPositions.some(position =>
+        !COLORS.some(color => color.id === state.fios[position])
+      )) return null;
 
       return {
         estado: "AGUARDANDO_PARTIDA",
@@ -1000,15 +995,15 @@
     function updateConfigButton() {
       const targetCount = Number(wireCount.value);
       const occupiedCount = getOccupiedCount();
-      const selectedCount = getSelectedCount();
+      const coloredCount = getColoredCount();
       sendConfigBtn.disabled = !buildConfigPayload();
 
       document.getElementById("matchWires").textContent = `FIOS // ${String(targetCount).padStart(2, "0")}`;
 
       if (occupiedCount < targetCount) {
         document.getElementById("wireConfigState").textContent = `${occupiedCount}/${targetCount} POSIÇÕES`;
-      } else if (selectedCount < targetCount) {
-        document.getElementById("wireConfigState").textContent = `${selectedCount}/${targetCount} CORES`;
+      } else if (coloredCount < targetCount) {
+        document.getElementById("wireConfigState").textContent = `${coloredCount}/${targetCount} CORES`;
       } else {
         document.getElementById("wireConfigState").textContent = "PRONTO // ENVIAR";
       }
@@ -1121,10 +1116,11 @@
 
     wireCount.addEventListener("change", () => {
       const targetCount = Number(wireCount.value);
-      const occupiedPositions = POSITIONS.filter(position => state.fios[position] !== null);
+      const activePositions = getActivePositions();
 
-      while (occupiedPositions.length > targetCount) {
-        const position = occupiedPositions.pop();
+      while (activePositions.length > targetCount) {
+        const position = activePositions.pop();
+        state.posicoesAtivas.delete(position);
         state.fios[position] = null;
       }
 
