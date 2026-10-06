@@ -528,6 +528,9 @@
     .terminal-log .bad { color: var(--danger); }
     .terminal-log .cyan { color: var(--cyan); }
 
+
+    .hidden-stage { display: none; }
+    .hidden-stage.visible { display: block; }
     .footer {
       margin-top: 22px;
       border-top: 1px solid var(--line);
@@ -609,8 +612,8 @@
     <div class="page">
       <header class="page-heading">
         <div>
-          <div class="kicker">00 // CONTROLE OPERACIONAL</div>
-          <h1>ADMIN<br /><span style="color:var(--terminal)">BOMB.EXE</span></h1>
+          <div class="kicker">ADMIN</div>
+          <h1>BOMB<span style="color:var(--terminal)">.</span><br />EXE</h1>
           <p class="intro">
             Interface de controle da experiência física. Crie a partida, configure visualmente os fios
             e libere a etapa de entrada dos jogadores. Cada operação envia exatamente o protocolo esperado pela API.
@@ -642,57 +645,52 @@
         </article>
       </section>
 
-      <section class="layout">
-        <article class="panel">
-          <div class="panel-head">
-            <div>
-              <div class="panel-code">01 // CONFIGURAÇÃO</div>
-              <div class="panel-title">MAPEAMENTO DOS FIOS</div>
-            </div>
-            <div class="panel-code" id="wireConfigState">AGUARDANDO ID</div>
+      <section class="panel hidden-stage" id="configStage">
+        <div class="panel-head">
+          <div>
+            <div class="panel-code">01 // CONFIGURAÇÃO</div>
+            <div class="panel-title">MAPEAMENTO DOS FIOS</div>
+          </div>
+          <div class="panel-code" id="wireConfigState">ID // --</div>
+        </div>
+
+        <div class="panel-body">
+          <label class="field-label" for="wireCount">NÚMERO DE FIOS</label>
+          <div class="select-wrap">
+            <select id="wireCount">
+              <option value="3">03 // FIOS</option>
+              <option value="4">04 // FIOS</option>
+              <option value="5">05 // FIOS</option>
+            </select>
           </div>
 
-          <div class="panel-body">
-            <label class="field-label" for="wireCount">NÚMERO DE FIOS</label>
-            <div class="select-wrap">
-              <select id="wireCount" disabled>
-                <option value="3">03 // FIOS</option>
-                <option value="4" selected>04 // FIOS</option>
-                <option value="5">05 // FIOS</option>
-              </select>
-            </div>
+          <div class="wire-editor" id="wireEditor" style="margin-top:18px;"></div>
 
-            <div class="wire-editor" id="wireEditor" style="margin-top:18px;"></div>
-
-            <div class="actions">
-              <button class="btn" id="sendConfigBtn" disabled>[ ENVIAR CONFIGURAÇÃO ]</button>
-              <button class="btn secondary" id="clearConfigBtn" disabled>[ LIMPAR CORES ]</button>
-            </div>
-
-            <p class="helper">
-              Existem 5 posições físicas disponíveis. O número de fios define quantas posições devem ser ativadas,
-              mas você pode escolher qualquer combinação entre 1 e 5. As mesmas cores podem aparecer mais de uma vez.
-            </p>
+          <div class="actions">
+            <button class="btn" id="sendConfigBtn">[ ENVIAR CONFIGURAÇÃO ]</button>
           </div>
-        </article>
 
-        <article class="panel">
-          <div class="panel-head">
-            <div>
-              <div class="panel-code">02 // TRANSMISSÃO</div>
-              <div class="panel-title">PAYLOAD / POST</div>
-            </div>
+          <p class="helper">
+            Cada uma das 5 posições pode conter um fio ou ficar vazia. O número de fios selecionado precisa
+            corresponder exatamente à quantidade de posições ativas. A mesma cor pode aparecer mais de uma vez.
+          </p>
+        </div>
+      </section>
+
+      <section class="panel hidden-stage" id="playersStage" style="margin-top:14px;">
+        <div class="panel-head">
+          <div>
+            <div class="panel-code">02 // ENTRADA</div>
+            <div class="panel-title">ADICIONAR JOGADORES</div>
           </div>
-          <div class="panel-body">
-            <pre class="payload" id="payloadPreview">// aguardando criação da partida...</pre>
-            <div class="actions">
-              <button class="btn" id="addPlayersBtn" disabled>[ ADICIONAR JOGADORES ]</button>
-            </div>
-            <p class="helper">
-              Endpoint: <code>/postAddPlayer</code>. O comando fica disponível após a configuração da partida.
-            </p>
-          </div>
-        </article>
+          <div class="panel-code">AGUARDANDO AÇÃO</div>
+        </div>
+        <div class="panel-body">
+          <button class="btn" id="addPlayersBtn">[ ADICIONAR JOGADORES ]</button>
+          <p class="helper">
+            Envia <code>POST /postAddPlayer</code> usando o ID da partida criada.
+          </p>
+        </div>
       </section>
 
       <section class="panel" style="margin-top:14px;">
@@ -758,121 +756,111 @@
       { id: "MARROM", label: "MARROM", className: "color-MARROM" }
     ];
 
+    const POSITIONS = [1, 2, 3, 4, 5];
+
     const state = {
-      activeMatch: false,
       idPartida: null,
       numeroDeFios: 4,
-      fios: {},
-      activePositions: new Set([1, 2, 3, 4]),
-      configSent: false,
-      addPlayersSent: false
+      fios: {
+        1: null,
+        2: null,
+        3: null,
+        4: null,
+        5: null
+      },
+      configStageVisible: false,
+      playersStageVisible: false
     };
 
     const wireCount = document.getElementById("wireCount");
     const wireEditor = document.getElementById("wireEditor");
     const newMatchBtn = document.getElementById("newMatchBtn");
     const sendConfigBtn = document.getElementById("sendConfigBtn");
-    const clearConfigBtn = document.getElementById("clearConfigBtn");
     const addPlayersBtn = document.getElementById("addPlayersBtn");
-    const payloadPreview = document.getElementById("payloadPreview");
     const terminalLog = document.getElementById("terminalLog");
     const confirmModal = document.getElementById("confirmModal");
+    const configStage = document.getElementById("configStage");
+    const playersStage = document.getElementById("playersStage");
 
     function log(message, type = "") {
       const line = document.createElement("div");
       line.className = type;
-      const now = new Date();
-      const timestamp = now.toLocaleTimeString("pt-BR", { hour12: false });
+      const timestamp = new Date().toLocaleTimeString("pt-BR", { hour12: false });
       line.textContent = `[${timestamp}] ${message}`;
       terminalLog.prepend(line);
     }
 
     function getIdFromResponse(data) {
-      if (!data || typeof data !== "object") return null;
-      return (
-        data?.dados?.idPartida ??
-        data?.data?.idPartida ??
-        data?.idPartida ??
-        data?.dados?.dados?.idPartida ??
-        null
-      );
+      return data?.dados?.idPartida ?? data?.idPartida ?? null;
     }
 
-    async function postJson(path, body, sendBody = true) {
+    async function postJson(path, body) {
       const options = {
         method: "POST",
-        headers: { "Accept": "application/json" }
+        headers: {
+          "Accept": "application/json"
+        }
       };
 
-      if (sendBody) {
+      if (body !== undefined) {
         options.headers["Content-Type"] = "application/json";
         options.body = JSON.stringify(body);
       }
 
       const response = await fetch(`${API_BASE}${path}`, options);
       const raw = await response.text();
-      let data = null;
+      let data;
 
       try {
         data = raw ? JSON.parse(raw) : null;
-      } catch (_) {
+      } catch {
         data = raw;
       }
 
       if (!response.ok) {
-        const message = typeof data === "string" ? data : JSON.stringify(data);
-        throw new Error(`HTTP ${response.status}: ${message || response.statusText}`);
+        const detail = typeof data === "string" ? data : JSON.stringify(data);
+        throw new Error(`HTTP ${response.status}: ${detail || response.statusText}`);
       }
 
       return data;
     }
 
-    function setSession(idPartida) {
-      state.activeMatch = true;
-      state.idPartida = idPartida;
+    function resetSession(idPartida) {
+      state.idPartida = Number(idPartida);
       state.numeroDeFios = Number(wireCount.value);
-      state.fios = {};
-      state.activePositions = new Set(
-        Array.from({ length: state.numeroDeFios }, (_, index) => index + 1)
-      );
-      state.configSent = false;
-      state.addPlayersSent = false;
+      state.fios = { 1: null, 2: null, 3: null, 4: null, 5: null };
+      state.configStageVisible = true;
+      state.playersStageVisible = false;
 
-      for (const position of state.activePositions) {
-        state.fios[position] = null;
-      }
+      configStage.classList.add("visible");
+      playersStage.classList.remove("visible");
 
-      document.getElementById("matchId").textContent = idPartida ?? "--";
+      document.getElementById("matchId").textContent = state.idPartida;
       document.getElementById("matchState").textContent = "AGUARDANDO CONFIGURAÇÃO";
-      document.getElementById("matchWires").textContent = `FIOS // ${String(state.numeroDeFios).padStart(2, "0")}`;
+      document.getElementById("matchWires").textContent = "FIOS // --";
       document.getElementById("matchPlayers").textContent = "JOGADORES // BLOQUEADOS";
-      document.getElementById("wireConfigState").textContent = `ID // ${idPartida}`;
-
-      wireCount.disabled = false;
-      sendConfigBtn.disabled = false;
-      clearConfigBtn.disabled = false;
-      addPlayersBtn.disabled = true;
+      document.getElementById("wireConfigState").textContent = `ID // ${state.idPartida}`;
+      document.getElementById("lastAction").textContent = "PARTIDA OK";
 
       renderWireEditor();
-      updatePayload();
+      updateConfigButton();
     }
 
     async function startNewMatch() {
       try {
         newMatchBtn.disabled = true;
-        log("POST /postWaitingMatch // iniciando nova partida...", "cyan");
+        log("POST /postWaitingMatch // criando nova partida...", "cyan");
 
-        const response = await postJson("/postWaitingMatch", undefined, false);
+        const response = await postJson("/postWaitingMatch");
         const idPartida = getIdFromResponse(response);
 
         if (idPartida === null || idPartida === undefined) {
-          console.warn("Resposta /postWaitingMatch:", response);
-          throw new Error("A resposta não trouxe 'idPartida'. Verifique o retorno da API.");
+          throw new Error("A resposta de /postWaitingMatch não trouxe dados.idPartida.");
         }
 
-        setSession(idPartida);
-        log(`Partida #${idPartida} criada com sucesso.`, "good");
-        log("Editor de fios liberado. Escolha a quantidade e as cores.", "");
+        resetSession(idPartida);
+        log(`Partida #${idPartida} criada.`, "good");
+        log("Configuração de fios liberada // selecione exatamente o número de fios informado.");
       } catch (error) {
         log(`FALHA AO CRIAR PARTIDA: ${error.message}`, "bad");
       } finally {
@@ -880,47 +868,15 @@
       }
     }
 
-    function normalizeWirePositions(count) {
-      const activePositions = Array.from(state.activePositions || [])
-        .filter(position => position >= 1 && position <= 5)
-        .sort((a, b) => a - b);
-
-      while (activePositions.length < count) {
-        const nextPosition = [1, 2, 3, 4, 5].find(
-          position => !activePositions.includes(position)
-        );
-        if (!nextPosition) break;
-        activePositions.push(nextPosition);
-      }
-
-      while (activePositions.length > count) {
-        activePositions.pop();
-      }
-
-      state.activePositions = new Set(activePositions);
-
-      for (const position of [1, 2, 3, 4, 5]) {
-        if (!state.activePositions.has(position)) {
-          delete state.fios[position];
-        } else if (!(position in state.fios)) {
-          state.fios[position] = null;
-        }
-      }
-    }
-
-    function isPositionActive(position) {
-      return state.activePositions.has(position);
+    function getActivePositions() {
+      return POSITIONS.filter(position => state.fios[position] !== null);
     }
 
     function renderWireEditor() {
-      const count = Number(wireCount.value);
-      state.numeroDeFios = count;
-      normalizeWirePositions(count);
-
       wireEditor.innerHTML = "";
 
-      for (let position = 1; position <= 5; position++) {
-        const active = isPositionActive(position);
+      for (const position of POSITIONS) {
+        const active = state.fios[position] !== null;
         const row = document.createElement("div");
         row.className = `wire-row${active ? " active" : ""}`;
 
@@ -932,13 +888,10 @@
         slot.className = "wire-slot";
 
         const wireLine = document.createElement("div");
-        wireLine.className = "wire-line";
-        if (active && state.fios[position]) {
-          wireLine.style.background = colorToGradient(state.fios[position]);
-        } else {
-          wireLine.classList.add("empty");
-          wireLine.style.background = active ? "#121818" : "#0a0e0e";
-        }
+        wireLine.className = `wire-line${active ? "" : "empty"}`;
+        wireLine.style.background = active
+          ? colorToGradient(state.fios[position])
+          : "#0a0e0e";
 
         const buttons = document.createElement("div");
         buttons.className = "color-buttons";
@@ -950,10 +903,10 @@
           button.textContent = color.label;
           button.disabled = !active;
           button.addEventListener("click", () => {
-            if (!isPositionActive(position)) return;
+            if (!active) return;
             state.fios[position] = color.id;
             renderWireEditor();
-            updatePayload();
+            updateConfigButton();
           });
           buttons.appendChild(button);
         });
@@ -962,29 +915,42 @@
         toggle.type = "button";
         toggle.className = `position-toggle${active ? " active" : ""}`;
         toggle.textContent = active ? "[ FIO ATIVO ]" : "[ POSIÇÃO LIVRE ]";
-        toggle.addEventListener("click", () => {
-          if (active) {
-            state.activePositions.delete(position);
-            delete state.fios[position];
-          } else {
-            const activeCount = state.activePositions.size;
-            if (activeCount >= Number(wireCount.value)) {
-              log(`LIMITE ATINGIDO // ${wireCount.value} fios já selecionados.`, "warn");
-              return;
-            }
-            state.activePositions.add(position);
-            state.fios[position] = null;
-          }
-          state.configSent = false;
-          state.addPlayersSent = false;
-          addPlayersBtn.disabled = true;
-          renderWireEditor();
-          updatePayload();
-        });
+        toggle.addEventListener("click", () => togglePosition(position));
 
         slot.append(wireLine, buttons, toggle);
         row.append(number, slot);
         wireEditor.appendChild(row);
+      }
+    }
+
+    function togglePosition(position) {
+      const activeCount = getActivePositions().length;
+      const targetCount = Number(wireCount.value);
+
+      if (state.fios[position] !== null) {
+        state.fios[position] = null;
+        renderWireEditor();
+        updateConfigButton();
+        return;
+      }
+
+      if (activeCount >= targetCount) {
+        log(`LIMITE // a partida está configurada para ${targetCount} fios.`, "warn");
+        return;
+      }
+
+      state.fios[position] = null;
+      // null representa posição livre; precisamos de um marcador para fio sem cor.
+      state.fios[position] = "__SEM_COR__";
+      renderWireEditor();
+      updateConfigButton();
+    }
+
+    function normalizePositionMarker() {
+      for (const position of POSITIONS) {
+        if (state.fios[position] === "__SEM_COR__") {
+          state.fios[position] = null;
+        }
       }
     }
 
@@ -999,124 +965,124 @@
       return colors[color] || "#121818";
     }
 
+    function getSelectedCount() {
+      return POSITIONS.filter(position => {
+        const value = state.fios[position];
+        return value !== null && value !== "__SEM_COR__";
+      }).length;
+    }
+
+    function getOccupiedCount() {
+      return POSITIONS.filter(position => state.fios[position] !== null).length;
+    }
+
     function buildConfigPayload() {
-      const count = Number(wireCount.value);
-      const activePositions = Array.from(state.activePositions)
-        .sort((a, b) => a - b);
+      const numeroDeFios = Number(wireCount.value);
+      const occupiedPositions = POSITIONS.filter(position => state.fios[position] !== null);
 
-      if (activePositions.length !== count) return null;
-
-      const fios = [];
-
-      for (const position of activePositions) {
-        if (!state.fios[position]) return null;
-        fios.push({ posicao: position, cor: state.fios[position] });
-      }
+      if (!state.idPartida) return null;
+      if (occupiedPositions.length !== numeroDeFios) return null;
+      if (occupiedPositions.some(position => !COLORS.some(color => color.id === state.fios[position]))) return null;
 
       return {
         estado: "AGUARDANDO_PARTIDA",
         dados: {
-          idPartida: Number(state.idPartida),
-          numeroDeFios: count,
-          fios
+          idPartida: state.idPartida,
+          numeroDeFios,
+          fios: occupiedPositions.map(posicao => ({
+            posicao,
+            cor: state.fios[posicao]
+          }))
         }
       };
     }
 
-    function syntaxHighlight(json) {
-      const escaped = json
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
+    function updateConfigButton() {
+      const targetCount = Number(wireCount.value);
+      const occupiedCount = getOccupiedCount();
+      const selectedCount = getSelectedCount();
+      sendConfigBtn.disabled = !buildConfigPayload();
 
-      return escaped.replace(
-        /("(?:\\.|[^"\\])*")(?=\s*:)|("(?:\\.|[^"\\])*")|(\b\d+\b)/g,
-        (match, key, string, number) => {
-          if (key) return `<span class="key">${key}</span>`;
-          if (string) return `<span class="string">${string}</span>`;
-          return `<span class="number">${number}</span>`;
-        }
-      );
-    }
+      document.getElementById("matchWires").textContent = `FIOS // ${String(targetCount).padStart(2, "0")}`;
 
-    function updatePayload() {
-      const payload = buildConfigPayload();
-      payloadPreview.innerHTML = payload
-        ? syntaxHighlight(JSON.stringify(payload, null, 4))
-        : "// configure todos os fios para gerar o payload...";
-
-      const ready = Boolean(payload && state.idPartida);
-      sendConfigBtn.disabled = !ready;
+      if (occupiedCount < targetCount) {
+        document.getElementById("wireConfigState").textContent = `${occupiedCount}/${targetCount} POSIÇÕES`;
+      } else if (selectedCount < targetCount) {
+        document.getElementById("wireConfigState").textContent = `${selectedCount}/${targetCount} CORES`;
+      } else {
+        document.getElementById("wireConfigState").textContent = "PRONTO // ENVIAR";
+      }
     }
 
     async function sendConfig() {
       const payload = buildConfigPayload();
 
       if (!payload) {
-        log("CONFIGURAÇÃO INCOMPLETA // selecione uma cor para todos os fios.", "warn");
+        log("CONFIGURAÇÃO INVÁLIDA // selecione exatamente o número de fios e uma cor para cada um.", "warn");
         return;
       }
 
       try {
         sendConfigBtn.disabled = true;
-        log("POST /postWaitingMatch // enviando configuração...", "cyan");
-        await postJson("/postWaitingMatch", payload, true);
+        log("POST /postConfigBomb // enviando configuração...", "cyan");
+        log(JSON.stringify(payload), "");
 
-        state.configSent = true;
+        const response = await postJson("/postConfigBomb", payload);
+
+        if (response?.estado !== "AGUARDANDO_JOGADORES") {
+          throw new Error(`Resposta inesperada: ${JSON.stringify(response)}`);
+        }
+
+        configStage.classList.remove("visible");
+        state.configStageVisible = false;
+        playersStage.classList.add("visible");
+        state.playersStageVisible = true;
+
         document.getElementById("matchState").textContent = "AGUARDANDO JOGADORES";
         document.getElementById("matchWires").textContent = `FIOS // ${String(payload.dados.numeroDeFios).padStart(2, "0")}`;
-        addPlayersBtn.disabled = false;
+        document.getElementById("matchPlayers").textContent = "JOGADORES // BLOQUEADOS";
         document.getElementById("lastAction").textContent = "CONFIG OK";
 
-        log(`Configuração da partida #${state.idPartida} enviada.`, "good");
-        log(`Payload confirmado: ${payload.dados.numeroDeFios} fios / posições 1-${payload.dados.numeroDeFios}.`, "");
+        log(`Configuração da partida #${state.idPartida} confirmada pela API.`, "good");
+        log("Estado recebido: AGUARDANDO_JOGADORES // etapa de entrada liberada.", "good");
       } catch (error) {
-        log(`FALHA NA CONFIGURAÇÃO: ${error.message}`, "bad");
         sendConfigBtn.disabled = false;
+        log(`FALHA AO CONFIGURAR BOMBA: ${error.message}`, "bad");
       }
     }
 
     async function addPlayers() {
-      if (!state.idPartida || !state.configSent) return;
+      if (!state.idPartida || !state.playersStageVisible) return;
 
       const payload = {
         estado: "ADICIONAR_JOGADORES",
         dados: {
-          idPartida: Number(state.idPartida)
+          idPartida: state.idPartida
         }
       };
 
       try {
         addPlayersBtn.disabled = true;
         log("POST /postAddPlayer // liberando entrada dos jogadores...", "cyan");
-        await postJson("/postAddPlayer", payload, true);
+        log(JSON.stringify(payload), "");
 
-        state.addPlayersSent = true;
-        document.getElementById("matchState").textContent = "ADICIONANDO JOGADORES";
+        const response = await postJson("/postAddPlayer", payload);
+
+        if (response?.estado !== "ADICIONAR_JOGADORES" || Number(response?.dados?.idPartida) !== state.idPartida) {
+          throw new Error(`Resposta inesperada: ${JSON.stringify(response)}`);
+        }
+
+        document.getElementById("matchState").textContent = "ADICIONAR JOGADORES";
         document.getElementById("matchPlayers").textContent = "JOGADORES // LIBERADOS";
         document.getElementById("lastAction").textContent = "PLAYERS OK";
+        addPlayersBtn.disabled = true;
 
-        payloadPreview.innerHTML = syntaxHighlight(JSON.stringify(payload, null, 4));
         log(`Entrada dos jogadores liberada para a partida #${state.idPartida}.`, "good");
+        log("Estado recebido: ADICIONAR_JOGADORES.", "good");
       } catch (error) {
-        log(`FALHA AO ADICIONAR JOGADORES: ${error.message}`, "bad");
         addPlayersBtn.disabled = false;
+        log(`FALHA AO ADICIONAR JOGADORES: ${error.message}`, "bad");
       }
-    }
-
-    function clearColors() {
-      state.fios = {};
-      state.activePositions = new Set();
-      state.configSent = false;
-      state.addPlayersSent = false;
-      normalizeWirePositions(Number(wireCount.value));
-      renderWireEditor();
-      updatePayload();
-      addPlayersBtn.disabled = true;
-      document.getElementById("matchState").textContent = "AGUARDANDO CONFIGURAÇÃO";
-      document.getElementById("matchPlayers").textContent = "JOGADORES // BLOQUEADOS";
-      document.getElementById("lastAction").textContent = "CONFIG RESET";
-      log("Editor de fios limpo localmente. Nenhum POST foi enviado.", "warn");
     }
 
     function openConfirm() {
@@ -1132,11 +1098,8 @@
     }
 
     newMatchBtn.addEventListener("click", () => {
-      if (state.activeMatch && state.idPartida !== null) {
-        openConfirm();
-      } else {
-        startNewMatch();
-      }
+      if (state.idPartida !== null) openConfirm();
+      else startNewMatch();
     });
 
     document.getElementById("cancelConfirm1").addEventListener("click", closeConfirm);
@@ -1157,22 +1120,24 @@
     });
 
     wireCount.addEventListener("change", () => {
-      const previousCount = state.numeroDeFios;
-      normalizeWirePositions(Number(wireCount.value));
+      const targetCount = Number(wireCount.value);
+      const occupiedPositions = POSITIONS.filter(position => state.fios[position] !== null);
+
+      while (occupiedPositions.length > targetCount) {
+        const position = occupiedPositions.pop();
+        state.fios[position] = null;
+      }
+
+      state.numeroDeFios = targetCount;
       renderWireEditor();
-      updatePayload();
-      state.configSent = false;
-      state.addPlayersSent = false;
-      addPlayersBtn.disabled = true;
-      log(`Quantidade de fios alterada: ${previousCount} -> ${wireCount.value}. Posições podem ser ajustadas livremente entre 1 e 5.`, "");
+      updateConfigButton();
+      log(`Número de fios definido para ${String(targetCount).padStart(2, "0")}.`, "");
     });
 
     sendConfigBtn.addEventListener("click", sendConfig);
-    clearConfigBtn.addEventListener("click", clearColors);
     addPlayersBtn.addEventListener("click", addPlayers);
 
     renderWireEditor();
-    updatePayload();
     log("Admin carregado // aguardando criação de partida.", "good");
     log("API configurada: bomb.exe.feira-de-jogos.dev.br", "cyan");
   </script>
