@@ -10,13 +10,22 @@ router.post("/postWaitingMatch", async (req, res) => {
 
     try {
 
-        // Gera o próximo ID da partida
+        // ==========================================
+        // GERAR ID
+        // ==========================================
+
         const idPartida = await getNextSequence("partidas");
 
-        // Acessa o banco
+        // ==========================================
+        // ACESSAR BANCO
+        // ==========================================
+
         const db = getDb();
 
-        // Cria a partida
+        // ==========================================
+        // CRIAR PARTIDA
+        // ==========================================
+
         const novaPartida = {
             _id: idPartida,
             uuid: null,
@@ -28,10 +37,10 @@ router.post("/postWaitingMatch", async (req, res) => {
                     id: null,
                     nome: null
                 },
-                EIT: { 
-                     id: null,
+                EIT: {
+                    id: null,
                     nome: null
-                },
+                }
             },
 
             dispositivos: {
@@ -80,22 +89,19 @@ router.post("/postWaitingMatch", async (req, res) => {
             finishedAt: null
         };
 
-        // Salva no MongoDB
         await db.collection("partidas").insertOne(novaPartida);
 
-        // Retorna o ID para quem fez a requisição
-        res.status(200).json({
-            id_partida: idPartida
-        });
+        // ==========================================
+        // COMUNICAR COM A BOMBA
+        // ==========================================
 
-        try {
-
-            const respostaBomba = await enviarEEsperarResposta(
-                mqttClient,
-                `bombexe/${idPartida}/server/bomba`,
+        const respostaBomba = await enviarEEsperarResposta(
+            mqttClient,
+            `bombexe/${idPartida}/server/bomba`,
 
             {
                 estado: "AGUARDANDO_PARTIDA",
+
                 dados: {
                     idPartida: idPartida
                 }
@@ -110,78 +116,87 @@ router.post("/postWaitingMatch", async (req, res) => {
             }
         );
 
-            console.log("Bomba confirmou a partida:", respostaBomba);
-            await db.collection("partidas").updateOne(
-                { _id: idPartida },
-                {
-                    $set: {
-                        "dispositivos.bomba.conectado": true
-                    }
+        console.log(
+            "Bomba confirmou a partida:",
+            respostaBomba
+        );
+
+        await db.collection("partidas").updateOne(
+            { _id: idPartida },
+            {
+                $set: {
+                    "dispositivos.bomba.conectado": true
                 }
-            );
+            }
+        );
 
-        } catch (error) {
+        // ==========================================
+        // COMUNICAR COM A UNITY
+        // ==========================================
 
-            console.error(
-                `Erro ao iniciar comunicação com a Bomba da partida ${idPartida}:`,
-                error.message
-            );
+        const respostaUnity = await enviarEEsperarResposta(
+            mqttClient,
+            `bombexe/${idPartida}/server/unity`,
 
-        }
+            {
+                estado: "AGUARDANDO_PARTIDA",
 
-        try {
-
-            const respostaUnity = await enviarEEsperarResposta(
-                mqttClient,
-                `bombexe/${idPartida}/server/unity`,
-
-                {
-                    estado: "AGUARDANDO_PARTIDA",
-                    dados: {
-                        idPartida: idPartida
-                    }
-                },
-
-                (topicRecebido, dados) => {
-                    return (
-                        topicRecebido === `bombexe/${idPartida}/unity/server` &&
-                        dados.estado === "AGUARDANDO_PARTIDA" &&
-                        dados.dados?.idPartida === idPartida
-                    );
+                dados: {
+                    idPartida: idPartida
                 }
-            );
+            },
 
-            console.log("Unity confirmou a partida:", respostaUnity);
+            (topicRecebido, dados) => {
+                return (
+                    topicRecebido === `bombexe/${idPartida}/unity/server` &&
+                    dados.estado === "AGUARDANDO_PARTIDA" &&
+                    dados.dados?.idPartida === idPartida
+                );
+            }
+        );
 
-            await db.collection("partidas").updateOne(
-                { _id: idPartida },
-                {
-                    $set: {
-                        "dispositivos.unity.conectado": true
-                    }
+        console.log(
+            "Unity confirmou a partida:",
+            respostaUnity
+        );
+
+        await db.collection("partidas").updateOne(
+            { _id: idPartida },
+            {
+                $set: {
+                    "dispositivos.unity.conectado": true
                 }
-            );
+            }
+        );
 
-        } catch (error) {
+        // ==========================================
+        // TUDO DEU CERTO
+        // ==========================================
 
-            console.error(
-                `Erro ao iniciar comunicação com a Unity da partida ${idPartida}:`,
-                error.message
-            );
+        return res.status(200).json({
+            estado: "AGUARDANDO_PARTIDA",
 
-        }
+            dados: {
+                idPartida: idPartida
+            }
+        });
 
     } catch (error) {
 
-        console.error("Erro ao criar partida:", error);
+        console.error(
+            `Erro ao iniciar partida:`,
+            error
+        );
 
-        res.status(500).json({
-            erro: "Erro ao criar partida"
+        // ==========================================
+        // ERRO
+        // ==========================================
+
+        return res.status(500).json({
+            erro: "Erro ao iniciar partida",
+            mensagem: error.message
         });
-
-
     }
-
 });
 
 module.exports = router;

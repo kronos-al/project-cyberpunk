@@ -227,67 +227,67 @@ async function handleUnityMessage(topic, dados, mqttClient) {
             }
         );
 
-        try {
+            try {
 
-            const respostaBomba = await enviarEEsperarResposta(
-                mqttClient,
+                const respostaBomba = await enviarEEsperarResposta(
+                    mqttClient,
 
-                `bombexe/${idPartida}/server/bomba`,
+                    `bombexe/${idPartida}/server/bomba`,
 
-                {
-                    estado: "COMECAR_PARTIDA",
-                    dados: {
-                        idPartida: idPartida
+                    {
+                        estado: "COMECAR_PARTIDA",
+                        dados: {
+                            idPartida: idPartida
+                        }
+                    },
+
+                    (topicRecebido, dadosRecebidos) => {
+
+                        return (
+                            topicRecebido ===
+                                `bombexe/${idPartida}/bomba/server` &&
+
+                            dadosRecebidos.estado ===
+                                "EM_PARTIDA" &&
+
+                            dadosRecebidos.dados?.idPartida ===
+                                idPartida &&
+
+                            typeof dadosRecebidos.dados?.numeroDeSerie ===
+                                "string" &&
+
+                            dadosRecebidos.dados.numeroDeSerie.trim().length > 0
+                        );
                     }
-                },
+                );
 
-                (topicRecebido, dadosRecebidos) => {
+                console.log(
+                    `Bomba confirmou o início da partida ${idPartida}:`,
+                    respostaBomba
+                );
 
-                    return (
-                        topicRecebido ===
-                            `bombexe/${idPartida}/bomba/server` &&
-
-                        dadosRecebidos.estado ===
-                            "EM_PARTIDA" &&
-
-                        dadosRecebidos.dados?.idPartida ===
-                            idPartida &&
-
-                        typeof dadosRecebidos.dados?.numeroDeSerie ===
-                            "string" &&
-
-                        dadosRecebidos.dados.numeroDeSerie.trim().length > 0
-                    );
-                }
-            );
-
-            console.log(
-                `Bomba confirmou o início da partida ${idPartida}:`,
-                respostaBomba
-            );
-
-            await db.collection("partidas").updateOne(
-                {
-                    _id: idPartida
-                },
-                {
-                    $set: {
-                        estado: "EM_PARTIDA",
-                        startedAt: new Date(),
-                        "bomba.numeroDeSerie":
-                            respostaBomba.dados.numeroDeSerie
+                await db.collection("partidas").updateOne(
+                    {
+                        _id: idPartida
+                    },
+                    {
+                        $set: {
+                            estado: "EM_PARTIDA",
+                            startedAt: new Date(),
+                            "bomba.numeroDeSerie":
+                                respostaBomba.dados.numeroDeSerie
+                        }
                     }
-                }
-            );
+                );
 
-        } catch (error) {
+            } catch (error) {
 
-            console.error(
-                `Erro ao iniciar a partida ${idPartida}:`,
-                error
-            );
+                console.error(
+                    `Erro ao iniciar a partida ${idPartida}:`,
+                    error
+                );
 
-        }
+            }
 
 
     }

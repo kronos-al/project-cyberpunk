@@ -92,7 +92,7 @@ router.post("/postConfigBomb", async (req, res) => {
             });
 
         }
-
+        console.log("Codigo continua")
 
         // ==========================================
         // BLOQUEAR CONFIGURAÇÕES SIMULTÂNEAS
