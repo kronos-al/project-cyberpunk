@@ -660,7 +660,7 @@
             <select id="wireCount">
               <option value="3">03 // FIOS</option>
               <option value="4">04 // FIOS</option>
-              <option value="5">05 // FIOS</option>
+              <option value="5" selected>05 // FIOS</option>
             </select>
           </div>
 
@@ -671,8 +671,8 @@
           </div>
 
           <p class="helper">
-            Cada uma das 5 posições pode conter um fio ou ficar vazia. O número de fios selecionado precisa
-            corresponder exatamente à quantidade de posições ativas. A mesma cor pode aparecer mais de uma vez.
+            As 5 posições estão sempre disponíveis. Você pode usar 3, 4 ou 5 fios; com 05 fios, todas as posições 01, 02, 03, 04 e 05 podem ficar ativas ao mesmo tempo.
+            O número selecionado precisa corresponder exatamente à quantidade de posições ativas. A mesma cor pode aparecer mais de uma vez.
           </p>
         </div>
       </section>
@@ -760,7 +760,7 @@
 
     const state = {
       idPartida: null,
-      numeroDeFios: 4,
+      numeroDeFios: 5,
       fios: {
         1: null,
         2: null,
