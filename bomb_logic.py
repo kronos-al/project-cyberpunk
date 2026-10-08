@@ -345,7 +345,7 @@ def generateSerialAndPasswordCode():
 
 def iniciarContagemBomba():
 
-    partida.tempoBomba = 50
+    partida.tempoBomba = 300
     partida.timer_ativo = True
 
 
