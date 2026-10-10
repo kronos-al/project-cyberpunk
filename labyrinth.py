@@ -309,6 +309,7 @@ def moverPlayer(direcao):
             moveSound.play()
         else:
             wallSound.play()
+            partidaAtual.falhas += 1
     else:
         wallSound.play()
 
@@ -341,7 +342,7 @@ def executarJogo():
                 if (
                     partidaAtiva
                     and partidaAtual is not None
-                    and partidaAtual.falhas <= 3
+                    and partidaAtual.falhas < 3
                 ):
                     if event.key == pygame.K_UP:
                         moverPlayer("cima")
@@ -371,7 +372,7 @@ def executarJogo():
                         elif not partidaAtual.puzzle5:
                             print("Você não está em um objetivo!")
 
-        if partidaAtiva and partidaAtual is not None and partidaAtual.falhas <= 3:
+        if partidaAtiva and partidaAtual is not None and partidaAtual.falhas < 3:
             gameScreen.blit(background, (0, 0))
 
             if playerDirection == "cima":

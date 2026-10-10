@@ -8,7 +8,7 @@ import labyrinth
 
 from dataclasses import dataclass
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
-#from physical_bomb_controller import updateScreenSerieLCD
+from physical_bomb_controller import updateScreenSerieLCD
 
 
 
@@ -108,6 +108,9 @@ pygame.mixer.init()
 beepBomb = pygame.mixer.Sound(
     "sounds/beep_bomb.mp3"
 )
+bombExplosion = pygame.mixer.Sound(
+    "sounds/bomb_explosion.mp3"
+)
 
 def on_mqtt_message(client, msg):
     global partida
@@ -161,8 +164,8 @@ def on_mqtt_message(client, msg):
                 json.dumps(mensagem_resposta),
                 qos=1
             )
-#            updateScreenSerieLCD("AGUARDANDO A", 0, 0, True, False)
-#            updateScreenSerieLCD("PARTIDA", 0, 1, False, False)
+            updateScreenSerieLCD("AGUARDANDO A", 0, 0, True, False)
+            updateScreenSerieLCD("PARTIDA", 0, 1, False, False)
             print(f"Publicado em: {topico_resposta}")
             print(f"Mensagem: {mensagem_resposta}")
 
@@ -220,6 +223,8 @@ def on_mqtt_message(client, msg):
             partida.serialCode, partida.serialPassword = generateSerialAndPasswordCode()
 
             print("serialPassword", partida.serialPassword)
+
+            updateScreenSerieLCD("SERIE: " + partida.serialCode, 0, 0, True, False)
 
             # Escolhe aleatoriamente uma das 8 configurações
             partida.chosenLEDsButtonPosition, partida.chosenLEDs = random.choice(
@@ -284,6 +289,22 @@ def on_mqtt_message(client, msg):
 
             print(f"Publicado em: {topico_resposta}")
             print(f"Mensagem: {mensagem_resposta}")
+
+        case "PARTIDA_FINALIZADA":
+            topico_resposta = f"bombexe/{partida.id}/bomba/server"
+
+            mensagem_resposta = {
+                "estado": "PARTIDA_FINALIZADA",
+                "dados": {
+                    "idPartida": partida.id,
+                }
+            }
+
+            client.publish(
+                topico_resposta,
+                json.dumps(mensagem_resposta),
+                qos=1
+            )
 
 def generateSerialAndPasswordCode():
     # 1. Geração do Código de Série (LNLNLN)
@@ -438,7 +459,7 @@ def iniciarBeepBomba():
         time.sleep(intervalo)
 
 def loopPartida(client):
-
+    estadoAnteriorFalhas = 0
     partida.loop_ativo = True
 
     print("Loop da partida iniciado.")
@@ -446,21 +467,62 @@ def loopPartida(client):
     while partida.loop_ativo:
 
         # ==========================================
+        # VERIFICAR FALHAS
+        # ==========================================
+
+        if partida.falhas > estadoAnteriorFalhas:
+            print(partida.falhas, "Falhas")
+            estadoAnteriorFalhas = partida.falhas
+        elif partida.falhas < estadoAnteriorFalhas:
+            print(partida.falhas, "Falhas.")
+            print("Falhas resetadas!")
+            estadoAnteriorFalhas = partida.falhas
+
+        # ==========================================
         # VERIFICAR TEMPO
         # ==========================================
 
-        if partida.tempoBomba <= 0:
+        if partida.tempoBomba <= 0 or partida.falhas >= 3:
 
             partida.derrota = True
 
-            print("TEMPO ESGOTADO!")
+            print("TEMPO ESGOTADO OU FALHAS EXCEDIDAS!")
             print("DERROTA!")
 
             partida.estado = "DERROTA"
 
+            # ========================================
+            # Responde para a partida
+            # ========================================
+
+            topico_resposta = f"bombexe/{partida.id}/bomba/server"
+
+            mensagem_resposta = {
+                "estado": "FIM_DE_JOGO",
+                "dados": {
+                    "idPartida": partida.id,
+                    "erros": partida.falhas,
+                    "tempo": partida.tempoBomba,
+                    "resultado": "DERROTA",
+                    "puzzles": {
+                        "chaveDeInicializacao": partida.puzzle1,
+                        "ajusteDeSintonizacao": partida.puzzle2,
+                        "bussolaDeLeds": partida.puzzle3,
+                        "fios": partida.puzzle4,
+                        "labirinto": partida.puzzle5
+                        }
+                }
+            }
+
+            client.publish(
+                topico_resposta,
+                json.dumps(mensagem_resposta),
+                qos=1
+            )
+            bombExplosion.play()
+            partida.timer_ativo = False
             partida.loop_ativo = False
             break
-
 
         # ==========================================
         # VERIFICAR PUZZLES
