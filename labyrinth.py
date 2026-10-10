@@ -322,7 +322,8 @@ def moverPlayer(direcao):
 def executarJogo():
     global running, partidaAtiva
     global playerDirection, animacaoInicio
-
+    global fps
+    fps = 15
     if screen is None:
         iniciarJogo()
 
@@ -332,7 +333,6 @@ def executarJogo():
     clock = pygame.time.Clock()
 
     while running:
-        fps = 15
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
