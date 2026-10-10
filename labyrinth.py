@@ -463,7 +463,7 @@ def executarJogo():
 
         else:
             screen.fill((0, 0, 0))
-            fps = 0
+            fps = 1
 
         pygame.display.flip()
         clock.tick(fps)
