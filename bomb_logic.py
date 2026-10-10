@@ -8,7 +8,7 @@ import labyrinth
 
 from dataclasses import dataclass
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
-from physical_bomb_controller import updateScreenSerieLCD
+from physical_bomb_controller import updateScreenSerieLCD, setupKeypad, readKeypad
 
 
 
@@ -85,6 +85,7 @@ class Partida:
 
         self.serialCode = None
         self.serialPassword = None
+        self.serialInput = ""
 
         self.tempoBomba = 300
         self.tempoBombaFormatado = "05:00"
@@ -111,6 +112,8 @@ beepBomb = pygame.mixer.Sound(
 bombExplosion = pygame.mixer.Sound(
     "sounds/bomb_explosion.mp3"
 )
+
+setupKeypad()
 
 def on_mqtt_message(client, msg):
     global partida
@@ -531,6 +534,21 @@ def loopPartida(client):
         # Puzzle 1
         if partida.puzzle1:
             print("Puzzle 1 concluído!")
+        else:
+            tecla = readKeypad()
+
+            if tecla is not None and tecla.isdigit():
+                partida.serialInput += tecla
+
+                updateScreenSerieLCD(
+                    partida.serialInput,
+                    0,
+                    1,
+                    False,
+                    True
+                )
+
+                print("Senha digitada:", partida.serialInput)
 
 
         # Puzzle 2
