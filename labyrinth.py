@@ -463,6 +463,6 @@ def executarJogo():
             screen.fill((0, 0, 0))
 
         pygame.display.flip()
-        clock.tick(60)
+        clock.tick(10)
 
     pygame.quit()
