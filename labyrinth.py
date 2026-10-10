@@ -79,7 +79,9 @@ def iniciarJogo():
     pygame.mixer.init()
 
     screen = pygame.display.set_mode(
-        (512, 512)
+        (pygame.display.Info().current_w,
+         pygame.display.Info().current_h),
+        pygame.FULLSCREEN
     )
 
     pygame.display.set_caption("BOMB.EXE - Labirinto")
