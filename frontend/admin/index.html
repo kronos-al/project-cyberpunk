@@ -747,6 +747,11 @@
 
   <script>
     const API_BASE = "https://bomb.exe.feira-de-jogos.dev.br";
+    const WS_BASE = API_BASE.replace(/^http/i, "ws");
+    const WS_RETRY_BASE_MS = 1000;
+    const WS_RETRY_MAX_MS = 15000;
+    const WS_MAX_ATTEMPTS = 10;
+    const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
     const COLORS = [
       { id: "VERMELHO", label: "VERMELHO", className: "color-VERMELHO" },
@@ -772,6 +777,10 @@
       configStageVisible: false,
       playersStageVisible: false,
       sessionId: 0,
+      adminSocket: null,
+      wsGen: 0,
+      wsTimer: null,
+      wsAttempts: 0,
       creatingMatch: false,
       sendingConfig: false,
       sendingPlayers: false
@@ -797,6 +806,97 @@
 
     function getIdFromResponse(data) {
       return data?.dados?.idPartida ?? data?.idPartida ?? null;
+    }
+
+    // Encerra e ESQUECE o socket atual: cancela tentativas de reconexão pendentes e
+    // invalida (via wsGen) qualquer evento tardio vindo do socket antigo.
+    function closeAdminSocket() {
+      state.wsGen += 1;
+      clearTimeout(state.wsTimer);
+      state.wsTimer = null;
+      state.wsAttempts = 0;
+
+      const socket = state.adminSocket;
+      state.adminSocket = null;
+      if (socket && socket.readyState <= 1) {
+        try { socket.close(1000, "nova partida"); } catch { /* socket já encerrado */ }
+      }
+    }
+
+    // Conecta em /admin/UUID e replica no LOG DO ADMINISTRADOR tudo que o servidor enviar.
+    // Se a conexão cair, reconecta sozinho (espera crescente) enquanto esta for a partida atual.
+    function connectAdminSocket(uuid, idPartida) {
+      closeAdminSocket();
+
+      if (typeof uuid !== "string" || !UUID_V4.test(uuid)) {
+        log("WS // a resposta de /postConfigBomb não trouxe um dados.uuid válido; acompanhamento em tempo real indisponível.", "warn");
+        return;
+      }
+
+      openAdminSocket(state.wsGen, uuid, idPartida);
+    }
+
+    function scheduleAdminReconnect(gen, uuid, idPartida) {
+      if (gen !== state.wsGen) return;
+
+      if (state.wsAttempts >= WS_MAX_ATTEMPTS) {
+        log(`WS // reconexão desistida após ${WS_MAX_ATTEMPTS} tentativas. Reenvie a configuração ou crie uma nova partida para tentar de novo.`, "bad");
+        return;
+      }
+
+      const delay = Math.min(WS_RETRY_BASE_MS * 2 ** state.wsAttempts, WS_RETRY_MAX_MS);
+      state.wsAttempts += 1;
+      log(`WS // reconectando em ${(delay / 1000).toFixed(0)}s (tentativa ${state.wsAttempts}/${WS_MAX_ATTEMPTS})...`, "warn");
+
+      clearTimeout(state.wsTimer);
+      state.wsTimer = setTimeout(() => {
+        state.wsTimer = null;
+        if (gen === state.wsGen) openAdminSocket(gen, uuid, idPartida);
+      }, delay);
+    }
+
+    function openAdminSocket(gen, uuid, idPartida) {
+      const url = `${WS_BASE}/admin/${uuid}`;
+      let socket;
+
+      try {
+        log(`WS // conectando em /admin/${uuid} ...`, "cyan");
+        socket = new WebSocket(url);
+      } catch (error) {
+        log(`WS // FALHA AO CONECTAR: ${error.message}`, "bad");
+        scheduleAdminReconnect(gen, uuid, idPartida);
+        return;
+      }
+
+      state.adminSocket = socket;
+      const isCurrent = () => gen === state.wsGen && state.adminSocket === socket;
+
+      socket.addEventListener("open", () => {
+        if (!isCurrent()) return;
+        const reconectou = state.wsAttempts > 0;
+        state.wsAttempts = 0;
+        log(`WS // ${reconectou ? "reconectado" : "conexão aberta"} // partida #${idPartida}.`, "good");
+      });
+
+      socket.addEventListener("message", event => {
+        if (!isCurrent()) return;
+        const raw = typeof event.data === "string" ? event.data : "[mensagem binária]";
+        let texto = raw;
+        try { texto = JSON.stringify(JSON.parse(raw)); } catch { /* mantém texto bruto */ }
+        log(`WS // ${texto}`, "cyan");
+      });
+
+      socket.addEventListener("error", () => {
+        if (isCurrent()) log("WS // erro na conexão.", "bad");
+      });
+
+      // O evento "close" sempre vem depois de "error": é o único ponto que agenda a reconexão.
+      socket.addEventListener("close", event => {
+        if (!isCurrent()) return;
+        state.adminSocket = null;
+        log(`WS // conexão encerrada (código ${event.code}).`, "warn");
+        scheduleAdminReconnect(gen, uuid, idPartida);
+      });
     }
 
     async function postJson(path, body) {
@@ -844,6 +944,7 @@
       state.sendingConfig = false;
       state.sendingPlayers = false;
       addPlayersBtn.disabled = false;
+      closeAdminSocket();
 
       configStage.classList.add("visible");
       playersStage.classList.remove("visible");
@@ -1095,6 +1196,8 @@
 
         log(`Configuração da partida #${state.idPartida} confirmada pela API.`, "good");
         log("Estado recebido: AGUARDANDO_JOGADORES // etapa de entrada liberada.", "good");
+
+        connectAdminSocket(response?.dados?.uuid, payload.dados.idPartida);
       } catch (error) {
         if (session === state.sessionId) {
           log(`FALHA AO CONFIGURAR BOMBA: ${error.message}`, "bad");
