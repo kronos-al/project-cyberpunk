@@ -332,6 +332,7 @@ def executarJogo():
     clock = pygame.time.Clock()
 
     while running:
+        fps = 15
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -374,6 +375,7 @@ def executarJogo():
                             print("Você não está em um objetivo!")
 
         if partidaAtiva and partidaAtual is not None and partidaAtual.falhas < 3:
+            fps = 15
             gameScreen.blit(background, (0, 0))
 
             if playerDirection == "cima":
@@ -461,8 +463,9 @@ def executarJogo():
 
         else:
             screen.fill((0, 0, 0))
+            fps = 0
 
         pygame.display.flip()
-        clock.tick(10)
+        clock.tick(fps)
 
     pygame.quit()
