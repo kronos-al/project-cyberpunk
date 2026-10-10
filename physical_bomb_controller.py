@@ -10,6 +10,7 @@ serieNumberLCD = CharLCD(
 
 
 def updateScreenSerieLCD(text:str, xCursor:int, yCursor:int, clearAll:bool, clearLine:bool):
+    print(f"[LCD] Atualizando: {text!r}")
     if clearAll:
         serieNumberLCD.clear()
     elif clearLine:
