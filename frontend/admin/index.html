@@ -770,7 +770,11 @@
       },
       posicoesAtivas: new Set(),
       configStageVisible: false,
-      playersStageVisible: false
+      playersStageVisible: false,
+      sessionId: 0,
+      creatingMatch: false,
+      sendingConfig: false,
+      sendingPlayers: false
     };
 
     const wireCount = document.getElementById("wireCount");
@@ -834,6 +838,13 @@
       state.configStageVisible = true;
       state.playersStageVisible = false;
 
+      // Nova sessão: invalida respostas assíncronas da partida anterior e
+      // restaura flags/botões que a partida anterior deixou travados.
+      state.sessionId += 1;
+      state.sendingConfig = false;
+      state.sendingPlayers = false;
+      addPlayersBtn.disabled = false;
+
       configStage.classList.add("visible");
       playersStage.classList.remove("visible");
 
@@ -849,6 +860,9 @@
     }
 
     async function startNewMatch() {
+      if (state.creatingMatch) return;
+      state.creatingMatch = true;
+
       try {
         newMatchBtn.disabled = true;
         log("POST /postWaitingMatch // criando nova partida...", "cyan");
@@ -866,6 +880,7 @@
       } catch (error) {
         log(`FALHA AO CRIAR PARTIDA: ${error.message}`, "bad");
       } finally {
+        state.creatingMatch = false;
         newMatchBtn.disabled = false;
       }
     }
@@ -978,16 +993,35 @@
       ).length;
     }
 
-    function buildConfigPayload() {
+    // Retorna uma string descrevendo o problema, ou null se a configuração é válida.
+    function validateConfig() {
       const numeroDeFios = Number(wireCount.value);
       const occupiedPositions = getActivePositions();
 
-      if (state.idPartida === null) return null;
-      if (numeroDeFios < 3 || numeroDeFios > 5) return null;
-      if (occupiedPositions.length !== numeroDeFios) return null;
-      if (occupiedPositions.some(position =>
+      if (state.idPartida === null || !Number.isInteger(state.idPartida)) return "nenhuma partida ativa.";
+      if (!Number.isInteger(numeroDeFios) || numeroDeFios < 3 || numeroDeFios > 5) {
+        return "numeroDeFios deve ser 3, 4 ou 5.";
+      }
+      if (occupiedPositions.length !== numeroDeFios) {
+        return `o painel está em ${numeroDeFios} fios, mas há ${occupiedPositions.length} posição(ões) ativa(s).`;
+      }
+      if (occupiedPositions.some(position => !POSITIONS.includes(position))) {
+        return "posição fora do intervalo 1 a 5.";
+      }
+      const semCor = occupiedPositions.filter(position =>
         !COLORS.some(color => color.id === state.fios[position])
-      )) return null;
+      );
+      if (semCor.length) {
+        return `posição(ões) ${semCor.join(", ")} ativa(s) sem cor.`;
+      }
+      return null;
+    }
+
+    function buildConfigPayload() {
+      if (validateConfig() !== null) return null;
+
+      const numeroDeFios = Number(wireCount.value);
+      const occupiedPositions = getActivePositions();
 
       return {
         estado: "AGUARDANDO_PARTIDA",
@@ -1006,7 +1040,7 @@
       const targetCount = Number(wireCount.value);
       const occupiedCount = getOccupiedCount();
       const coloredCount = getColoredCount();
-      sendConfigBtn.disabled = !buildConfigPayload();
+      sendConfigBtn.disabled = state.sendingConfig || !buildConfigPayload();
 
       document.getElementById("matchWires").textContent = `FIOS // ${String(targetCount).padStart(2, "0")}`;
 
@@ -1020,12 +1054,18 @@
     }
 
     async function sendConfig() {
+      if (state.sendingConfig) return;
+
       const payload = buildConfigPayload();
 
       if (!payload) {
-        log("CONFIGURACAO INVALIDA // escolha exatamente 3, 4 ou 5 posicoes e defina uma cor para cada fio ativo.", "warn");
+        const motivo = validateConfig();
+        log(`CONFIGURACAO INVALIDA // ${motivo || "verifique os fios."} Escolha exatamente 3, 4 ou 5 posicoes e defina uma cor para cada fio ativo.`, "warn");
         return;
       }
+
+      const session = state.sessionId;
+      state.sendingConfig = true;
 
       try {
         sendConfigBtn.disabled = true;
@@ -1033,6 +1073,11 @@
         log(JSON.stringify(payload), "");
 
         const response = await postJson("/postConfigBomb", payload);
+
+        if (session !== state.sessionId) {
+          log(`Resposta de /postConfigBomb da partida #${payload.dados.idPartida} ignorada: outra partida foi criada nesse meio tempo.`, "warn");
+          return;
+        }
 
         if (response?.estado !== "AGUARDANDO_JOGADORES") {
           throw new Error(`Resposta inesperada: ${JSON.stringify(response)}`);
@@ -1042,6 +1087,7 @@
         state.configStageVisible = false;
         playersStage.classList.add("visible");
         state.playersStageVisible = true;
+        addPlayersBtn.disabled = false;
 
         document.getElementById("matchState").textContent = "AGUARDANDO JOGADORES";
         document.getElementById("matchWires").textContent = `FIOS // ${String(payload.dados.numeroDeFios).padStart(2, "0")}`;
@@ -1051,18 +1097,31 @@
         log(`Configuração da partida #${state.idPartida} confirmada pela API.`, "good");
         log("Estado recebido: AGUARDANDO_JOGADORES // etapa de entrada liberada.", "good");
       } catch (error) {
-        sendConfigBtn.disabled = false;
-        log(`FALHA AO CONFIGURAR BOMBA: ${error.message}`, "bad");
+        if (session === state.sessionId) {
+          log(`FALHA AO CONFIGURAR BOMBA: ${error.message}`, "bad");
+        } else {
+          log(`Falha ignorada de /postConfigBomb da partida anterior: ${error.message}`, "warn");
+        }
+      } finally {
+        if (session === state.sessionId) {
+          state.sendingConfig = false;
+          updateConfigButton();
+        }
       }
     }
 
     async function addPlayers() {
       if (!state.idPartida || !state.playersStageVisible) return;
+      if (state.sendingPlayers) return;
+
+      const session = state.sessionId;
+      const idPartida = state.idPartida;
+      state.sendingPlayers = true;
 
       const payload = {
         estado: "ADICIONAR_JOGADORES",
         dados: {
-          idPartida: state.idPartida
+          idPartida
         }
       };
 
@@ -1073,7 +1132,12 @@
 
         const response = await postJson("/postAddPlayer", payload);
 
-        if (response?.estado !== "ADICIONAR_JOGADORES" || Number(response?.dados?.idPartida) !== state.idPartida) {
+        if (session !== state.sessionId) {
+          log(`Resposta de /postAddPlayer da partida #${idPartida} ignorada: outra partida foi criada nesse meio tempo.`, "warn");
+          return;
+        }
+
+        if (response?.estado !== "ADICIONAR_JOGADORES" || Number(response?.dados?.idPartida) !== idPartida) {
           throw new Error(`Resposta inesperada: ${JSON.stringify(response)}`);
         }
 
@@ -1082,11 +1146,17 @@
         document.getElementById("lastAction").textContent = "PLAYERS OK";
         addPlayersBtn.disabled = true;
 
-        log(`Entrada dos jogadores liberada para a partida #${state.idPartida}.`, "good");
+        log(`Entrada dos jogadores liberada para a partida #${idPartida}.`, "good");
         log("Estado recebido: ADICIONAR_JOGADORES.", "good");
       } catch (error) {
-        addPlayersBtn.disabled = false;
-        log(`FALHA AO ADICIONAR JOGADORES: ${error.message}`, "bad");
+        if (session === state.sessionId) {
+          addPlayersBtn.disabled = false;
+          log(`FALHA AO ADICIONAR JOGADORES: ${error.message}`, "bad");
+        } else {
+          log(`Falha ignorada de /postAddPlayer da partida anterior: ${error.message}`, "warn");
+        }
+      } finally {
+        if (session === state.sessionId) state.sendingPlayers = false;
       }
     }
 
@@ -1148,4 +1218,4 @@
     log("API configurada: bomb.exe.feira-de-jogos.dev.br", "cyan");
   </script>
 </body>
-</html>
+</html> 
