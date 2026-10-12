@@ -307,7 +307,7 @@ def on_mqtt_message(client, msg):
             print(f"Mensagem: {mensagem_resposta}")
 
         case "PARTIDA_FINALIZADA":
-            if partida.estado != "DERROTA" or partida.estado != "VITORIA":
+            if partida.estado != "DERROTA" and partida.estado != "VITORIA":
                 print("Partida não está no estado FINALIZAÇÃO")
                 return
             topico_resposta = f"bombexe/{partida.id}/bomba/server"
