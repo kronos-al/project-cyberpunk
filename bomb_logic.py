@@ -237,6 +237,9 @@ def on_mqtt_message(client, msg):
             for led in partida.chosenLEDs:
                 print(f"LED {led.numero}: {'LIGADO' if led.ligado else 'DESLIGADO'}")
 
+            # Aplica a configuração nos LEDs físicos
+            setCompassLEDs(partida.chosenLEDs)
+
             # ==========================================
             # INICIAR TEMPO
             # ==========================================

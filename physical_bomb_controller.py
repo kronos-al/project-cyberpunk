@@ -1,6 +1,5 @@
 from RPLCD.i2c import CharLCD
 from gpiozero import LED as GpioLED
-from bomb_logic import CONFIGURACOES_LED
 
 # ==========================================
 # CONFIGURAÇÃO DO DISPLAY DO CÓDIGO DE SERIE
@@ -47,14 +46,15 @@ def setAllLEDs(estado: bool):
 # APLICAR CONFIGURAÇÃO DA BÚSSOLA
 # ==========================================
 
-def setCompassLEDs(configuracao: str):
-    if configuracao not in CONFIGURACOES_LED:
-        raise ValueError(
-            f"Configuração de LEDs inválida: {configuracao}"
-        )
+def setCompassLEDs(configuracao: list):
+    """
+    Recebe uma lista de objetos LED definidos em bomb_logic.py.
+    """
 
-    for led in CONFIGURACOES_LED[configuracao]:
-        # O número da classe corresponde ao índice do GPIO
+    for led in configuracao:
+        if not 0 <= led.numero < len(ledsFisicos):
+            raise ValueError(f"Número de LED inválido: {led.numero}")
+
         ledFisico = ledsFisicos[led.numero]
 
         if led.ligado:
@@ -62,4 +62,4 @@ def setCompassLEDs(configuracao: str):
         else:
             ledFisico.off()
 
-    print(f"[LEDs] Configuração aplicada: {configuracao}")
+    print("[LEDs] Configuração aplicada.")
