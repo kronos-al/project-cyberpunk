@@ -78,6 +78,7 @@ class Partida:
 
         self.numeroDeFios = 0
         self.fios = []
+        self.fioCorreto = None
 
         self.chosenLEDs= []
         self.chosenLEDsButtonPosition = None
@@ -221,12 +222,23 @@ def on_mqtt_message(client, msg):
             # CONFIGURAÇÃO DA PARTIDA
             # ==========================================
 
+            # GERANDO CÓDIGO DE SÉRIE E SENHA - PUZZLE 1
+
             partida.serialCode, partida.serialPassword = generateSerialAndPasswordCode()
 
             print("serialPassword", partida.serialPassword)
 
-            updateScreenSerieLCD("SERIE: " + partida.serialCode, 0, 0, True, False)
+            updateScreenSerieLCD("SERIAL: " + partida.serialCode, 0, 0, True, False)
 
+            # ESCOLHENDO FIO CORRETO A SER CORTADO - PUZZLE 4
+            partida.fioCorreto = escolherFioCorreto()
+
+            print(
+                f"Fio correto: posição {partida.fioCorreto['posicao']}, "
+                f"cor {partida.fioCorreto['cor']}"
+            )
+
+            # GERANDO LEDs e ligando - PUZZLE 3
             # Escolhe aleatoriamente uma das 8 configurações
             partida.chosenLEDsButtonPosition, partida.chosenLEDs = random.choice(
                 list(CONFIGURACOES_LED.items())
@@ -398,6 +410,123 @@ def generateSerialAndPasswordCode():
     passwordCode = digito1 + digito2 + digito3 + digito4
 
     return serialCode, passwordCode
+
+# ==========================================
+# ESCOLHER O FIO CORRETO PARA CORTAR
+# ==========================================
+
+def escolherFioCorreto():
+    """
+    Determina o fio correto com base:
+    - Na quantidade de fios;
+    - No código de série;
+    - Na cor dos fios;
+    - Na posição física dos fios.
+
+    A posição 1 é o fio mais acima.
+    Retorna um dicionário com a posição e a cor do fio.
+    """
+
+    fios = sorted(
+        partida.fios,
+        key=lambda fio: fio["posicao"]
+    )
+
+    numeroDeFios = partida.numeroDeFios
+    serialCode = partida.serialCode
+
+    # ==========================================
+    # BOMBA COM 3 FIOS
+    # ==========================================
+
+    if numeroDeFios == 3:
+
+        # Se o 4º caractere for par, cortar o primeiro vermelho
+        if int(serialCode[3]) % 2 == 0:
+            vermelhos = [
+                fio for fio in fios
+                if fio["cor"] == "VERMELHO"
+            ]
+
+            if vermelhos:
+                return vermelhos[0]
+
+        # Caso contrário, ou se não houver vermelho,
+        # cortar o último verde, se existir
+        verdes = [
+            fio for fio in fios
+            if fio["cor"] == "VERDE"
+        ]
+
+        if verdes:
+            return verdes[-1]
+
+        # Caso contrário, cortar o segundo fio
+        return fios[1]
+
+    # ==========================================
+    # BOMBA COM 4 FIOS
+    # ==========================================
+
+    elif numeroDeFios == 4:
+
+        # Se o último número do serial for par,
+        # cortar o primeiro azul
+        if int(serialCode[-1]) % 2 == 0:
+            azuis = [
+                fio for fio in fios
+                if fio["cor"] == "AZUL"
+            ]
+
+            if azuis:
+                return azuis[0]
+
+        # Caso contrário, ou se não houver azul,
+        # cortar o último laranja, se existir
+        laranjas = [
+            fio for fio in fios
+            if fio["cor"] == "LARANJA"
+        ]
+
+        if laranjas:
+            return laranjas[-1]
+
+        # Caso contrário, cortar o terceiro fio
+        return fios[2]
+
+    # ==========================================
+    # BOMBA COM 5 FIOS
+    # ==========================================
+
+    elif numeroDeFios == 5:
+
+        # Se a primeira letra do serial for vogal,
+        # cortar o primeiro verde
+        if serialCode[0] in "AEIOU":
+            verdes = [
+                fio for fio in fios
+                if fio["cor"] == "VERDE"
+            ]
+
+            if verdes:
+                return verdes[0]
+
+        # Caso contrário, ou se não houver verde,
+        # cortar o último marrom, se existir
+        marrons = [
+            fio for fio in fios
+            if fio["cor"] == "MARROM"
+        ]
+
+        if marrons:
+            return marrons[-1]
+
+        # Caso contrário, cortar o quarto fio
+        return fios[3]
+
+    raise ValueError(
+        f"Quantidade de fios inválida: {numeroDeFios}"
+    )
 
 def iniciarContagemBomba():
 
