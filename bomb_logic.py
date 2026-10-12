@@ -8,7 +8,7 @@ import labyrinth
 
 from dataclasses import dataclass
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
-from physical_bomb_controller import updateScreenSerieLCD
+from physical_bomb_controller import updateScreenSerieLCD, setAllLEDs, setCompassLEDs
 
 
 
@@ -146,7 +146,7 @@ def on_mqtt_message(client, msg):
             partida.id = int(dados["dados"]["idPartida"])
 
             labyrinth.resetPartida()
-
+            setAllLEDs(True)
             # ========================================
             # Responde para a partida
             # ========================================
@@ -315,7 +315,7 @@ def generateSerialAndPasswordCode():
 
     # DEFININDO PRIMEIRA LETRA - CARACTERE 1
     if partida.numeroDeFios == 5 and not any(
-            fio.cor == "VERDE" for fio in partida.fios
+            fio["cor"] == "VERDE" for fio in partida.fios
     ):
         firstLetter = random.choice("BCDFGHJKLMNPQRSTVWXYZ")
     else:
@@ -329,7 +329,7 @@ def generateSerialAndPasswordCode():
 
     # DEFININDO SEGUNDO NÚMERO - CARACTERE 4
     if partida.numeroDeFios == 3 and not any(
-            fio.cor == "VERMELHO" for fio in partida.fios
+            fio["cor"] == "VERMELHO" for fio in partida.fios
     ):
         secondNumber = random.choice("13579")
     else:
@@ -340,7 +340,7 @@ def generateSerialAndPasswordCode():
 
     # DEFININDO TERCEIRO NUMERO - CARACTERE 6
     if partida.numeroDeFios == 4 and not any(
-            fio.cor == "AZUL" for fio in partida.fios
+            fio["cor"] == "AZUL" for fio in partida.fios
     ):
         thirdNumber = random.choice("13579")
     else:
@@ -571,8 +571,12 @@ def loopPartida(client):
 
 
         # Puzzle 3
-        if partida.puzzle5:
+        if partida.puzzle3:
             print("Puzzle 3 concluído!")
+            setAllLEDs(False)
+
+        if partida.puzzle5:
+            print("Puzzle 5 concluído!")
 
 
         # ==========================================
