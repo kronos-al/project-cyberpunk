@@ -28,8 +28,7 @@ def updateScreenSerieLCD(text:str, xCursor:int, yCursor:int, clearAll:bool, clea
 # ==========================================
 
 # GPIOs em ordem: LED lógico 0 até LED lógico 9
-GPIOS = [17, 27, 22, 23, 24, 25, 5, 6, 16, 26]
-
+GPIOS = [17, 22, 24, 5, 16, 27, 23, 25, 6, 26]
 ledsFisicos = [GpioLED(gpio) for gpio in GPIOS]
 
 
