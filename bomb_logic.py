@@ -8,7 +8,7 @@ import labyrinth
 
 from dataclasses import dataclass
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
-from physical_bomb_controller import updateScreenSerieLCD, setupKeypad, readKeypad
+from physical_bomb_controller import updateScreenSerieLCD
 
 
 
@@ -85,7 +85,6 @@ class Partida:
 
         self.serialCode = None
         self.serialPassword = None
-        self.serialInput = ""
 
         self.tempoBomba = 300
         self.tempoBombaFormatado = "05:00"
@@ -113,7 +112,6 @@ bombExplosion = pygame.mixer.Sound(
     "sounds/bomb_explosion.mp3"
 )
 
-setupKeypad()
 
 def on_mqtt_message(client, msg):
     global partida
@@ -294,6 +292,9 @@ def on_mqtt_message(client, msg):
             print(f"Mensagem: {mensagem_resposta}")
 
         case "PARTIDA_FINALIZADA":
+            if partida.estado != "DERROTA" or partida.estado != "VITORIA":
+                print("Partida não está no estado FINALIZAÇÃO")
+                return
             topico_resposta = f"bombexe/{partida.id}/bomba/server"
 
             mensagem_resposta = {
@@ -311,12 +312,40 @@ def on_mqtt_message(client, msg):
 
 def generateSerialAndPasswordCode():
     # 1. Geração do Código de Série (LNLNLN)
-    firstLetter = random.choice(string.ascii_uppercase)
+
+    # DEFININDO PRIMEIRA LETRA - CARACTERE 1
+    if partida.numeroDeFios == 5 and not any(
+            fio.cor == "VERDE" for fio in partida.fios
+    ):
+        firstLetter = random.choice("BCDFGHJKLMNPQRSTVWXYZ")
+    else:
+        firstLetter = random.choice(string.ascii_uppercase)
+
+    # DEFININDO PRIMEIRO NÚMERO - CARACTERE 2
     firstNumber = random.choice(string.digits)
+
+    # DEFININDO SEGUNDA LETRA - CARACTERE 3
     secondLetter = random.choice(string.ascii_uppercase)
-    secondNumber = random.choice(string.digits)
+
+    # DEFININDO SEGUNDO NÚMERO - CARACTERE 4
+    if partida.numeroDeFios == 3 and not any(
+            fio.cor == "VERMELHO" for fio in partida.fios
+    ):
+        secondNumber = random.choice("13579")
+    else:
+        secondNumber = random.choice(string.digits)
+
+    # DEFININDO TERCEIRA LETRA - CARACTERE 5
     thirdLetter = random.choice(string.ascii_uppercase)
-    thirdNumber = random.choice(string.digits)
+
+    # DEFININDO TERCEIRO NUMERO - CARACTERE 6
+    if partida.numeroDeFios == 4 and not any(
+            fio.cor == "AZUL" for fio in partida.fios
+    ):
+        thirdNumber = random.choice("13579")
+    else:
+        thirdNumber = random.choice(string.digits)
+
 
     serialCode = firstLetter + firstNumber + secondLetter + secondNumber + thirdLetter + thirdNumber
 
@@ -534,21 +563,6 @@ def loopPartida(client):
         # Puzzle 1
         if partida.puzzle1:
             print("Puzzle 1 concluído!")
-        else:
-            tecla = readKeypad()
-
-            if tecla is not None and tecla.isdigit():
-                partida.serialInput += tecla
-
-                updateScreenSerieLCD(
-                    partida.serialInput,
-                    0,
-                    1,
-                    False,
-                    True
-                )
-
-                print("Senha digitada:", partida.serialInput)
 
 
         # Puzzle 2
