@@ -5,7 +5,6 @@ const { getDb } = require("../database/mongodb.js");
 const { mqttClient } = require("../mqtt/mqtt-client.js");
 const { enviarEEsperarResposta } = require("../mqtt/mqtt-request.js");
 const { v4: uuidv4 } = require("uuid");
-const { enviarEEsperarResposta } = require("../mqtt/mqtt-request.js");
 const axios = require("axios");
 const { OAuth2Client } = require("google-auth-library");
 const client = new OAuth2Client();
