@@ -33,12 +33,13 @@ router.post("/postWaitingMatch", async (req, res) => {
 
         try {
             const resposta = await axios.post(
-                "https://feira-de-jogos.dev.br/api/v2/login",
+                'https://feira-de-jogos.dev.br/api/v2/login',
+                {}, // O corpo (body) fica vazio, se a API só pedir o token no header
                 {
-                    token: req.token
+                headers: {
+                    'Authorization': `Bearer ${req.token}`
                 },
-                {
-                    timeout: 10000
+                timeout: 10000
                 }
             );
 

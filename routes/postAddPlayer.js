@@ -34,15 +34,16 @@ router.post("/postAddPlayer", async (req, res) => {
         // ==========================================
 
         try {
-            const resposta = await axios.post(
-                "https://feira-de-jogos.dev.br/api/v2/login",
-                {
-                    token: req.token
-                },
-                {
+                const resposta = await axios.post(
+                    'https://feira-de-jogos.dev.br/api/v2/login',
+                    {}, // O corpo (body) fica vazio, se a API só pedir o token no header
+                    {
+                    headers: {
+                        'Authorization': `Bearer ${req.token}`
+                    },
                     timeout: 10000
-                }
-            );
+                    }
+                );
 
             const { user, operator } = resposta.data;
 
