@@ -573,6 +573,13 @@
     .confirm-step { display: none; }
     .confirm-step.visible { display: block; }
 
+    #loginModal { z-index: 110; }
+    .modal-card.login-card { border-color: var(--line); }
+    .login-card .modal-code { color: var(--terminal); }
+    .login-card .modal-card strong, .login-card strong { color: var(--terminal); }
+    .login-status { min-height: 18px; margin-top: 14px; color: var(--warning); font-size: 11px; line-height: 1.7; }
+    .login-google { margin-top: 18px; min-height: 44px; }
+
     @media (max-width: 900px) {
       .dashboard, .layout { grid-template-columns: 1fr; }
       .page-heading { grid-template-columns: 1fr; }
@@ -745,9 +752,29 @@
     </div>
   </div>
 
+  <div class="modal" id="loginModal" aria-hidden="true">
+    <div class="modal-card login-card">
+      <div class="modal-code">ACCESS CONTROL // OPERATOR LOGIN</div>
+      <h2>Autenticação necessária.</h2>
+      <p>
+        Entre com a sua conta Google de <strong>operador</strong> para usar o painel.
+        O token de acesso é enviado em cada chamada à API.
+      </p>
+      <div class="login-google" id="googleBtn"></div>
+      <div class="login-status" id="loginStatus" role="status"></div>
+    </div>
+  </div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
     const API_BASE = "https://bomb.exe.feira-de-jogos.dev.br";
     const WS_BASE = API_BASE.replace(/^http/i, "ws");
+    const GOOGLE_CLIENT_ID = "331191695151-ku8mdhd76pc2k36itas8lm722krn0u64.apps.googleusercontent.com";
+    // Campos do body que carregam o ID token do Google (o backend lê req.token).
+    // Ajuste/remova conforme o middleware do servidor.
+    const AUTH_BODY_FIELDS = ["token", "access_token"];
+    const TOKEN_STORAGE_KEY = "bombexe.admin.googleIdToken";
+    const TOKEN_EXPIRY_MARGIN_MS = 60 * 1000;
     const WS_RETRY_BASE_MS = 1000;
     const WS_RETRY_MAX_MS = 15000;
     const WS_MAX_ATTEMPTS = 10;
@@ -899,18 +926,184 @@
       });
     }
 
+    // =====================================================================
+    // AUTENTICAÇÃO (Google Identity Services -> ID token enviado no body)
+    // =====================================================================
+    const loginModal = document.getElementById("loginModal");
+    const loginStatus = document.getElementById("loginStatus");
+    const googleBtn = document.getElementById("googleBtn");
+
+    let authToken = null;
+    let googleInitialized = false;
+    let googlePollTimer = null;
+
+    function decodeJwtPayload(jwt) {
+      try {
+        const part = String(jwt).split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+        const padded = part + "=".repeat((4 - (part.length % 4)) % 4);
+        const json = decodeURIComponent(
+          atob(padded).split("").map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join("")
+        );
+        return JSON.parse(json);
+      } catch {
+        return null;
+      }
+    }
+
+    function isTokenUsable(jwt) {
+      const payload = decodeJwtPayload(jwt);
+      return Boolean(payload?.exp) && payload.exp * 1000 > Date.now() + TOKEN_EXPIRY_MARGIN_MS;
+    }
+
+    function readStoredToken() {
+      try { return localStorage.getItem(TOKEN_STORAGE_KEY); } catch { return null; }
+    }
+
+    function storeToken(jwt) {
+      try { localStorage.setItem(TOKEN_STORAGE_KEY, jwt); } catch { /* armazenamento indisponível */ }
+    }
+
+    function clearStoredToken() {
+      try { localStorage.removeItem(TOKEN_STORAGE_KEY); } catch { /* armazenamento indisponível */ }
+    }
+
+    // Retorna um token ainda válido ou null (descartando o que expirou).
+    function getValidToken() {
+      if (!authToken) authToken = readStoredToken();
+      if (authToken && !isTokenUsable(authToken)) {
+        log("Token expirado // descartado.", "warn");
+        authToken = null;
+        clearStoredToken();
+      }
+      return authToken;
+    }
+
+    // Revoga o token: descarta localmente e impede que o Google reescolha a mesma conta sozinho.
+    function revokeToken(reason) {
+      authToken = null;
+      clearStoredToken();
+      try { window.google?.accounts?.id?.disableAutoSelect(); } catch { /* biblioteca indisponível */ }
+      log(`Token revogado // ${reason}.`, "warn");
+    }
+
+    function hideLogin() {
+      loginModal.classList.remove("visible");
+      loginModal.setAttribute("aria-hidden", "true");
+      loginStatus.textContent = "";
+    }
+
+    function handleCredential(response) {
+      const jwt = response?.credential;
+
+      if (!jwt || !isTokenUsable(jwt)) {
+        loginStatus.textContent = "O Google devolveu um token inválido ou expirado. Tente novamente.";
+        log("LOGIN // token recebido do Google inválido ou expirado.", "bad");
+        return;
+      }
+
+      authToken = jwt;
+      storeToken(jwt);
+      const payload = decodeJwtPayload(jwt);
+      hideLogin();
+      log(`LOGIN OK // ${payload?.email || "operador"} autenticado.`, "good");
+    }
+
+    function initGoogle() {
+      if (googleInitialized) return;
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleCredential,
+        auto_select: true,
+        cancel_on_tap_outside: false
+      });
+      window.google.accounts.id.renderButton(googleBtn, {
+        theme: "filled_black",
+        size: "large",
+        text: "signin_with",
+        shape: "rectangular"
+      });
+      googleInitialized = true;
+    }
+
+    function whenGoogleReady(callback) {
+      clearInterval(googlePollTimer);
+
+      if (window.google?.accounts?.id) {
+        initGoogle();
+        callback();
+        return;
+      }
+
+      let tries = 0;
+      googlePollTimer = setInterval(() => {
+        if (window.google?.accounts?.id) {
+          clearInterval(googlePollTimer);
+          initGoogle();
+          callback();
+        } else if (++tries > 100) {
+          clearInterval(googlePollTimer);
+          loginStatus.textContent = "Não foi possível carregar o login do Google (accounts.google.com bloqueado?).";
+          log("LOGIN // biblioteca do Google não carregou.", "bad");
+        }
+      }, 100);
+    }
+
+    // Exibe a tela de login. prompt=false evita o One Tap automático (ex.: após revogação).
+    function showLogin({ message = "", prompt = true } = {}) {
+      loginStatus.textContent = message;
+      loginModal.classList.add("visible");
+      loginModal.setAttribute("aria-hidden", "false");
+
+      whenGoogleReady(() => {
+        if (prompt) {
+          try { window.google.accounts.id.prompt(); } catch { /* One Tap indisponível; o botão continua visível */ }
+        }
+      });
+    }
+
+    function handleAuthRejection(status, data) {
+      const detail = typeof data === "string" ? data : (data?.erro || data?.mensagem || "");
+      const fallback = status === 403
+        ? "Acesso negado. Apenas operadores podem criar partidas."
+        : "Sessão rejeitada pelo servidor.";
+
+      log(`${status === 403 ? "ACESSO NEGADO" : "NAO AUTORIZADO"} // ${detail || fallback}`, "bad");
+      revokeToken(`HTTP ${status}`);
+      showLogin({ message: `${detail || fallback} Entre novamente com uma conta de operador.`, prompt: false });
+    }
+
+    function initAuth() {
+      const token = getValidToken();
+
+      if (token) {
+        const payload = decodeJwtPayload(token);
+        log(`LOGIN // sessão restaurada para ${payload?.email || "operador"}.`, "good");
+        return;
+      }
+
+      log("LOGIN // autenticação necessária antes de operar o painel.", "warn");
+      showLogin();
+    }
+
     async function postJson(path, body) {
+      const token = getValidToken();
+
+      if (!token) {
+        showLogin({ message: "Sessão ausente ou expirada. Faça login para continuar." });
+        throw new Error("Login necessário: sessão ausente ou expirada.");
+      }
+
+      const authBody = { ...(body || {}) };
+      AUTH_BODY_FIELDS.forEach(field => { authBody[field] = token; });
+
       const options = {
         method: "POST",
         headers: {
-          "Accept": "application/json"
-        }
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(authBody)
       };
-
-      if (body !== undefined) {
-        options.headers["Content-Type"] = "application/json";
-        options.body = JSON.stringify(body);
-      }
 
       const response = await fetch(`${API_BASE}${path}`, options);
       const raw = await response.text();
@@ -920,6 +1113,10 @@
         data = raw ? JSON.parse(raw) : null;
       } catch {
         data = raw;
+      }
+
+      if (response.status === 401 || response.status === 403) {
+        handleAuthRejection(response.status, data);
       }
 
       if (!response.ok) {
@@ -1318,6 +1515,7 @@
     renderWireEditor();
     log("Admin carregado // aguardando criação de partida.", "good");
     log("API configurada: bomb.exe.feira-de-jogos.dev.br", "cyan");
+    initAuth();
   </script>
 </body>
 </html> 
