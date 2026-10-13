@@ -5,10 +5,74 @@ const { getDb } = require("../database/mongodb.js");
 const { getNextSequence } = require("../database/counter.js");
 const { mqttClient } = require("../mqtt/mqtt-client.js");
 const { enviarEEsperarResposta } = require("../mqtt/mqtt-request.js");
+const axios = require("axios");
+const { OAuth2Client } = require("google-auth-library");
+const client = new OAuth2Client();
+const audience = process.env.GOOGLE_CLIENT_ID.split(" ");
 
 router.post("/postWaitingMatch", async (req, res) => {
+    let payload;
 
     try {
+        try {
+            const ticket = await client.verifyIdToken({
+                audience,
+                idToken: req.token,
+            });
+
+            payload = ticket.getPayload();
+
+        } catch (err) {
+            console.error("Token do Google inválido:", err);
+            return res.sendStatus(401);
+        }
+
+        // ==========================================
+        // VALIDAR USUÁRIO NA FEIRA DE JOGOS
+        // ==========================================
+
+        try {
+            const resposta = await axios.post(
+                "https://feira-de-jogos.dev.br/api/v2/login",
+                {
+                    token: req.token
+                },
+                {
+                    timeout: 10000
+                }
+            );
+
+            const { user, operator } = resposta.data;
+
+            // Verificar se o usuário existe e é operador
+            if (!user || !operator) {
+                return res.status(403).json({
+                    erro: "Acesso negado. Apenas operadores podem criar partidas."
+                });
+            }
+
+            console.log("Operador autenticado:", user);
+
+        } catch (err) {
+            console.error(
+                "Erro ao validar usuário na Feira de Jogos:",
+                err.response?.data || err.message
+            );
+
+            if (err.response?.status === 401 || err.response?.status === 403) {
+                return res.status(err.response.status).json({
+                    erro: "Usuário não autorizado."
+                });
+            }
+
+            return res.status(502).json({
+                erro: "Não foi possível validar o usuário na Feira de Jogos."
+            });
+        }
+
+        // ==========================================
+        // CONTINUAR COM A CRIAÇÃO DA PARTIDA
+        // ==========================================
 
         // ==========================================
         // GERAR ID
