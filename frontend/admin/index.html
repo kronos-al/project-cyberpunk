@@ -770,9 +770,6 @@
     const API_BASE = "https://bomb.exe.feira-de-jogos.dev.br";
     const WS_BASE = API_BASE.replace(/^http/i, "ws");
     const GOOGLE_CLIENT_ID = "331191695151-ku8mdhd76pc2k36itas8lm722krn0u64.apps.googleusercontent.com";
-    // Campos do body que carregam o ID token do Google (o backend lê req.token).
-    // Ajuste/remova conforme o middleware do servidor.
-    const AUTH_BODY_FIELDS = ["token", "access_token"];
     const TOKEN_STORAGE_KEY = "bombexe.admin.googleIdToken";
     const TOKEN_EXPIRY_MARGIN_MS = 60 * 1000;
     const WS_RETRY_BASE_MS = 1000;
@@ -1093,17 +1090,20 @@
         throw new Error("Login necessário: sessão ausente ou expirada.");
       }
 
-      const authBody = { ...(body || {}) };
-      AUTH_BODY_FIELDS.forEach(field => { authBody[field] = token; });
-
+      // O backend (auth-bearer-parser) lê o ID token do header Authorization: Bearer
+      // e o expõe em req.token. O body continua exatamente o contrato original.
       const options = {
         method: "POST",
         headers: {
           "Accept": "application/json",
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(authBody)
+          "Authorization": `Bearer ${token}`
+        }
       };
+
+      if (body !== undefined) {
+        options.headers["Content-Type"] = "application/json";
+        options.body = JSON.stringify(body);
+      }
 
       const response = await fetch(`${API_BASE}${path}`, options);
       const raw = await response.text();
