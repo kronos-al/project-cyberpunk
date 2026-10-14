@@ -4,7 +4,7 @@ import math
 import random
 
 from bomb_logic import puzzleSolvedSound
-from physical_bomb_controller import updateFalhas
+from physical_bomb_controller import updateFalhas, turnOffAllLeds
 
 # ==========================================
 # CONFIGURAÇÃO
@@ -477,4 +477,5 @@ def executarJogo():
         pygame.display.flip()
         clock.tick(fps)
 
+    turnOffAllLeds()
     pygame.quit()
