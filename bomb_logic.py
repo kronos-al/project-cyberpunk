@@ -106,6 +106,13 @@ class Partida:
 partida = Partida()
 setupKeypad()
 
+
+pygame.mixer.pre_init(
+    frequency=44100,
+    size=-16,
+    channels=2,
+    buffer=512
+)
 pygame.mixer.init()
 
 beepBomb = pygame.mixer.Sound(
