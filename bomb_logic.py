@@ -260,7 +260,7 @@ def on_mqtt_message(client, msg):
             print("serialPassword", partida.serialPassword)
 
             updateScreenSerieLCD("SERIAL: " + partida.serialCode, 0, 0, True, False)
-            updateScreenSerieLCD("" + partida.serialCode, 0, 1, False, False)
+            updateScreenSerieLCD("" + partida.serialCode, 0, 1, False, True)
             blinkLCDCursor(True)
             updateFalhas(partida.falhas)
 
