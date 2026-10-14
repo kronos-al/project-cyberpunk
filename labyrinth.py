@@ -2,6 +2,7 @@ import os
 import pygame
 import math
 import random
+from physical_bomb_controller import updateFalhas
 
 # ==========================================
 # CONFIGURAÇÃO
@@ -311,6 +312,7 @@ def moverPlayer(direcao):
         else:
             wallSound.play()
             partidaAtual.falhas += 1
+            updateFalhas(partidaAtual.falhas)
     else:
         wallSound.play()
 

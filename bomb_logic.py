@@ -5,10 +5,9 @@ import threading
 import random
 import pygame
 import labyrinth
-
 from dataclasses import dataclass
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
-from physical_bomb_controller import updateScreenSerieLCD, setSerieLCDEnabled, setupKeypad, readKeypad
+from physical_bomb_controller import updateScreenSerieLCD, setSerieLCDEnabled, setupKeypad, readKeypad, updateFalhas
 
 
 
@@ -730,6 +729,7 @@ def processarTecladoPuzzle1():
         else:
 
             partida.falhas += 1
+            updateFalhas(partida.falhas)
             puzzleFail.play()
             partida.serialInput = ""
 

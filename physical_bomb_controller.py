@@ -4,6 +4,25 @@ from gpiozero import (
     DigitalOutputDevice
 )
 import time
+import serial
+import json
+
+# ==========================================
+# COMUNICAÇÃO SERIAL
+# ==========================================
+
+espSerial = serial.Serial('/dev/serial0', baudrate=9600, timeout=1)
+
+def updateFalhas(falhas):
+    serial_json = {
+        "fails": falhas
+    }
+    # 2. Converte para string JSON e adiciona o '\n' no final
+    json_string = json.dumps(serial_json) + "\n"
+
+    # 3. Envia via serial codificado em bytes
+    espSerial.write(json_string.encode('utf-8'))
+    return
 
 # ==========================================
 # CONFIGURAÇÃO DO DISPLAY DO CÓDIGO DE SERIE
