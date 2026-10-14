@@ -8,7 +8,7 @@ import labyrinth
 
 from dataclasses import dataclass
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
-from physical_bomb_controller import updateScreenSerieLCD, setupKeypad, readKeypad
+from physical_bomb_controller import updateScreenSerieLCD, setSerieLCDEnabled, setupKeypad, readKeypad
 
 
 
@@ -119,6 +119,16 @@ puzzleFail = pygame.mixer.Sound(
     "sounds/fail.mp3"
 )
 
+keyboardSound1 = pygame.mixer.Sound(
+    "sounds/clickKeyboard1.mp3"
+)
+
+keyboardSound2 = pygame.mixer.Sound(
+    "sounds/clickKeyboard2.mp3"
+)
+
+
+clickSounds = [keyboardSound1, keyboardSound2]
 
 def on_mqtt_message(client, msg):
     global partida
@@ -171,6 +181,7 @@ def on_mqtt_message(client, msg):
                 json.dumps(mensagem_resposta),
                 qos=1
             )
+            setSerieLCDEnabled(True)
             updateScreenSerieLCD("AGUARDANDO A", 0, 0, True, False)
             updateScreenSerieLCD("PARTIDA", 0, 1, False, False)
             print(f"Publicado em: {topico_resposta}")
@@ -648,7 +659,7 @@ def processarTecladoPuzzle1():
     # ------------------------------------------
 
     if tecla.isdigit():
-
+        random.choice(clickSounds).play()
         # Limita a entrada ao tamanho da senha
         if (
             partida.serialPassword is not None
@@ -700,15 +711,14 @@ def processarTecladoPuzzle1():
         if partida.serialInput == partida.serialPassword:
 
             partida.puzzle1 = True
-
             updateScreenSerieLCD(
-                "CHAVE CORRETA",
+                "",
                 0,
                 1,
-                False,
-                True
+                True,
+                False
             )
-
+            setSerieLCDEnabled(False)
             print("[PUZZLE 1] Senha correta! Puzzle concluído.")
 
         else:
@@ -807,21 +817,6 @@ def loopPartida(client):
         if not partida.puzzle1:
             processarTecladoPuzzle1()
 
-        if partida.puzzle1:
-            print("Puzzle 1 concluído!")
-
-
-        # Puzzle 2
-        if partida.puzzle2:
-            print("Puzzle 2 concluído!")
-
-
-        # Puzzle 3
-        if partida.puzzle3:
-            print("Puzzle 3 concluído!")
-
-        if partida.puzzle5:
-            print("Puzzle 5 concluído!")
 
 
         # ==========================================
