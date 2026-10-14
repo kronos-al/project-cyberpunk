@@ -7,7 +7,7 @@ import pygame
 import labyrinth
 from dataclasses import dataclass
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
-from physical_bomb_controller import updateScreenSerieLCD, setupKeypad, readKeypad, updateFalhas
+from physical_bomb_controller import updateScreenSerieLCD, setupKeypad, readKeypad, updateFalhas, updatePuzzleLeds
 
 
 
@@ -190,6 +190,10 @@ def on_mqtt_message(client, msg):
             updateScreenSerieLCD("AGUARDANDO A", 0, 0, True, False)
             updateScreenSerieLCD("PARTIDA", 0, 1, False, False)
             updateFalhas(3)
+            updatePuzzleLeds([
+                LED(numero, True)
+                for numero in range(10)
+            ])
             print(f"Publicado em: {topico_resposta}")
             print(f"Mensagem: {mensagem_resposta}")
 
@@ -266,6 +270,7 @@ def on_mqtt_message(client, msg):
             partida.chosenLEDsButtonPosition, partida.chosenLEDs = random.choice(
                 list(CONFIGURACOES_LED.items())
             )
+            updatePuzzleLeds(partida.chosenLEDs)
 
             print("Configuração escolhida:", partida.chosenLEDsButtonPosition)
 

@@ -27,6 +27,26 @@ def updateFalhas(falhas):
     espSerial.write(json_string.encode('utf-8'))
     return
 
+def updatePuzzleLeds(leds):
+    serial_json = {
+        "type": "puzzle_leds",
+        "data": {
+            "leds": [
+                {
+                    "numero": led.numero,
+                    "ligado": led.ligado
+                }
+                for led in leds
+            ]
+        }
+    }
+
+    # Converte para JSON e adiciona a quebra de linha
+    json_string = json.dumps(serial_json) + "\n"
+
+    # Envia para a ESP32
+    espSerial.write(json_string.encode("utf-8"))
+
 # ==========================================
 # CONFIGURAÇÃO DO DISPLAY DO CÓDIGO DE SERIE
 # ==========================================
