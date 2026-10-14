@@ -7,7 +7,7 @@ import pygame
 import labyrinth
 from dataclasses import dataclass
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
-from physical_bomb_controller import updateScreenSerieLCD, setSerieLCDEnabled, setupKeypad, readKeypad, updateFalhas
+from physical_bomb_controller import updateScreenSerieLCD, setupKeypad, readKeypad, updateFalhas
 
 
 
@@ -187,9 +187,9 @@ def on_mqtt_message(client, msg):
                 json.dumps(mensagem_resposta),
                 qos=1
             )
-            setSerieLCDEnabled(True)
             updateScreenSerieLCD("AGUARDANDO A", 0, 0, True, False)
             updateScreenSerieLCD("PARTIDA", 0, 1, False, False)
+            updateFalhas(3)
             print(f"Publicado em: {topico_resposta}")
             print(f"Mensagem: {mensagem_resposta}")
 
@@ -251,6 +251,7 @@ def on_mqtt_message(client, msg):
             print("serialPassword", partida.serialPassword)
 
             updateScreenSerieLCD("SERIAL: " + partida.serialCode, 0, 0, True, False)
+            updateFalhas(partida.falhas)
 
             # ESCOLHENDO FIO CORRETO A SER CORTADO - PUZZLE 4
             partida.fioCorreto = escolherFioCorreto()
@@ -723,7 +724,6 @@ def processarTecladoPuzzle1():
                 True,
                 False
             )
-            setSerieLCDEnabled(False)
             print("[PUZZLE 1] Senha correta! Puzzle concluído.")
 
         else:

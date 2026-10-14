@@ -15,7 +15,10 @@ espSerial = serial.Serial('/dev/serial0', baudrate=9600, timeout=1)
 
 def updateFalhas(falhas):
     serial_json = {
-        "fails": falhas
+        "type": "falhas",
+        "data": {
+            "fails": falhas
+        }
     }
     # 2. Converte para string JSON e adiciona o '\n' no final
     json_string = json.dumps(serial_json) + "\n"
@@ -49,15 +52,15 @@ def updateScreenSerieLCD(text:str, xCursor:int, yCursor:int, clearAll:bool, clea
 # LIGAR / DESLIGAR DISPLAY E BACKLIGHT
 # ==========================================
 
-def setSerieLCDEnabled(enabled: bool):
-    # Liga/desliga os caracteres
-    serieNumberLCD.display_enabled = enabled
-
-    # Liga/desliga a iluminação de fundo
-    serieNumberLCD.backlight_enabled = enabled
-
-    estado = "ligado" if enabled else "desligado"
-    print(f"[LCD] Display e backlight {estado}.")
+#def setSerieLCDEnabled(enabled: bool):
+#    # Liga/desliga os caracteres
+#    serieNumberLCD.display_enabled = enabled
+#
+#    # Liga/desliga a iluminação de fundo
+#    serieNumberLCD.backlight_enabled = enabled
+#
+#    estado = "ligado" if enabled else "desligado"
+#    print(f"[LCD] Display e backlight {estado}.")
 
 # ==========================================
 # CONFIGURAÇÃO DO TECLADO MATRICIAL 4x3
