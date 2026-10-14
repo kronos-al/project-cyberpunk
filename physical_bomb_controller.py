@@ -6,7 +6,28 @@ from gpiozero import (
 import time
 import serial
 import json
+import board
+import busio
+from adafruit_ht16k33 import segments
 
+# ==========================================
+# CONFIGURAÇÃO DO RELÓGIO DE TEMPO
+# ==========================================
+i2c = busio.I2C(board.SCL, board.SDA)
+timeClock = segments.Seg7x4(i2c, address=0x70)
+timeClock.brightness = 1
+timeClock.colon = True
+
+
+
+def updateTimeClock(time:str):
+    try:
+        timeClock.print(time)
+    except:
+        timeClock.print("8888")
+
+def turnOffTimeClock():
+    timeClock.fill(0)
 # ==========================================
 # COMUNICAÇÃO SERIAL
 # ==========================================

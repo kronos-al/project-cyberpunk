@@ -7,7 +7,7 @@ import pygame
 import labyrinth
 from dataclasses import dataclass
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
-from physical_bomb_controller import (updateScreenSerieLCD, setSerieLCDEnabled,blinkLCDCursor,
+from physical_bomb_controller import (updateTimeClock, updateScreenSerieLCD, setSerieLCDEnabled,blinkLCDCursor,
                                       setupKeypad, readKeypad, updateFalhas, updatePuzzleLeds)
 
 
@@ -89,7 +89,7 @@ class Partida:
         self.serialInput = ""
 
         self.tempoBomba = 300
-        self.tempoBombaFormatado = "05:00"
+        self.tempoBombaFormatado = "0500"
 
         self.puzzle1 = False
         self.puzzle2 = False
@@ -192,6 +192,7 @@ def on_mqtt_message(client, msg):
                 json.dumps(mensagem_resposta),
                 qos=1
             )
+            updateTimeClock(partida.tempoBombaFormatado)
             blinkLCDCursor(False)
             updateScreenSerieLCD("AGUARDANDO A", 0, 0, True, False)
             updateScreenSerieLCD("PARTIDA", 0, 1, False, False)
@@ -573,16 +574,16 @@ def iniciarContagemBomba():
         minutos = partida.tempoBomba // 60
         segundos = partida.tempoBomba % 60
 
-        partida.tempoBombaFormatado = f"{minutos:02d}:{segundos:02d}"
-
-        print("Tempo da bomba:", partida.tempoBombaFormatado)
-
+        partida.tempoBombaFormatado = f"{minutos:02d}{segundos:02d}"
+        updateTimeClock(partida.tempoBombaFormatado)
+        #print("Tempo da bomba:", partida.tempoBombaFormatado)
         time.sleep(1)
 
         partida.tempoBomba -= 1
 
     partida.tempoBomba = 0
-    partida.tempoBombaFormatado = "00:00"
+    partida.tempoBombaFormatado = "0000"
+    updateTimeClock(partida.tempoBombaFormatado)
     partida.timer_ativo = False
 
     print("TEMPO ESGOTADO!")
