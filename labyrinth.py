@@ -2,6 +2,8 @@ import os
 import pygame
 import math
 import random
+
+from bomb_logic import puzzleSolvedSound
 from physical_bomb_controller import updateFalhas
 
 # ==========================================
@@ -127,6 +129,10 @@ def iniciarJogo():
 
     wallSound = pygame.mixer.Sound(
         os.path.join(ASSETS_PATH, "wall.mp3")
+    )
+
+    solvedSound = pygame.mixer.Sound(
+        os.path.join(ASSETS_PATH, "puzzle_solved.mp3")
     )
 
 
@@ -370,6 +376,7 @@ def executarJogo():
                             and tuple(playerPosition) in objetivos
                         ):
                             partidaAtual.puzzle5 = True
+                            puzzleSolvedSound.play()
                             animacaoInicio = pygame.time.get_ticks()
                             print("PUZZLE RESOLVIDO!")
 
