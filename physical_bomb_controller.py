@@ -68,6 +68,13 @@ def updateScreenSerieLCD(text:str, xCursor:int, yCursor:int, clearAll:bool, clea
     serieNumberLCD.cursor_pos = (yCursor, xCursor)
     serieNumberLCD.write_string(text)
 
+
+def blinkLCDCursor(blink:bool):
+    if blink:
+        serieNumberLCD.cursor_mode("blink")
+    else:
+        serieNumberLCD.cursor_mode("hide")
+
 # ==========================================
 # LIGAR / DESLIGAR DISPLAY E BACKLIGHT
 # ==========================================

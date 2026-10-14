@@ -7,7 +7,7 @@ import pygame
 import labyrinth
 from dataclasses import dataclass
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
-from physical_bomb_controller import updateScreenSerieLCD, setupKeypad, readKeypad, updateFalhas, updatePuzzleLeds
+from physical_bomb_controller import updateScreenSerieLCD, blinkLCDCursor, setupKeypad, readKeypad, updateFalhas, updatePuzzleLeds
 
 
 
@@ -133,6 +133,10 @@ keyboardSound2 = pygame.mixer.Sound(
     "sounds/clickKeyboard2.mp3"
 )
 
+puzzleSolvedSound = pygame.mixer.Sound(
+    "sounds/puzzle_solved.mp3"
+)
+
 
 clickSounds = [keyboardSound1, keyboardSound2]
 
@@ -187,6 +191,7 @@ def on_mqtt_message(client, msg):
                 json.dumps(mensagem_resposta),
                 qos=1
             )
+            blinkLCDCursor(False)
             updateScreenSerieLCD("AGUARDANDO A", 0, 0, True, False)
             updateScreenSerieLCD("PARTIDA", 0, 1, False, False)
             updateFalhas(3)
@@ -255,6 +260,7 @@ def on_mqtt_message(client, msg):
             print("serialPassword", partida.serialPassword)
 
             updateScreenSerieLCD("SERIAL: " + partida.serialCode, 0, 0, True, False)
+            blinkLCDCursor(True)
             updateFalhas(partida.falhas)
 
             # ESCOLHENDO FIO CORRETO A SER CORTADO - PUZZLE 4
@@ -722,6 +728,8 @@ def processarTecladoPuzzle1():
         if partida.serialInput == partida.serialPassword:
 
             partida.puzzle1 = True
+            puzzleSolvedSound.play()
+            blinkLCDCursor(False)
             updateScreenSerieLCD(
                 "",
                 0,
