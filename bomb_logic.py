@@ -7,7 +7,8 @@ import pygame
 import labyrinth
 from dataclasses import dataclass
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
-from physical_bomb_controller import updateScreenSerieLCD, blinkLCDCursor, setupKeypad, readKeypad, updateFalhas, updatePuzzleLeds
+from physical_bomb_controller import (updateScreenSerieLCD, setSerieLCDEnabled,blinkLCDCursor,
+                                      setupKeypad, readKeypad, updateFalhas, updatePuzzleLeds)
 
 
 
@@ -104,7 +105,7 @@ class Partida:
 
 partida = Partida()
 setupKeypad()
-
+setSerieLCDEnabled(True)
 
 pygame.mixer.pre_init(
     frequency=44100,

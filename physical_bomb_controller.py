@@ -89,15 +89,15 @@ def blinkLCDCursor(blink: bool):
 # LIGAR / DESLIGAR DISPLAY E BACKLIGHT
 # ==========================================
 
-#def setSerieLCDEnabled(enabled: bool):
-#    # Liga/desliga os caracteres
-#    serieNumberLCD.display_enabled = enabled
-#
-#    # Liga/desliga a iluminação de fundo
-#    serieNumberLCD.backlight_enabled = enabled
-#
-#    estado = "ligado" if enabled else "desligado"
-#    print(f"[LCD] Display e backlight {estado}.")
+def setSerieLCDEnabled(enabled: bool):
+    # Liga/desliga os caracteres
+    serieNumberLCD.display_enabled = enabled
+
+    # Liga/desliga a iluminação de fundo
+    serieNumberLCD.backlight_enabled = enabled
+
+    estado = "ligado" if enabled else "desligado"
+    print(f"[LCD] Display e backlight {estado}.")
 
 # ==========================================
 # CONFIGURAÇÃO DO TECLADO MATRICIAL 4x3
