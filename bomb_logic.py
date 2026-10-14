@@ -659,14 +659,13 @@ def processarTecladoPuzzle1():
     # ------------------------------------------
 
     if tecla.isdigit():
-        random.choice(clickSounds).play()
         # Limita a entrada ao tamanho da senha
         if (
             partida.serialPassword is not None
             and len(partida.serialInput) < len(partida.serialPassword)
         ):
             partida.serialInput += tecla
-
+            random.choice(clickSounds).play()
             updateScreenSerieLCD(
                 partida.serialInput,
                 0,
@@ -687,7 +686,7 @@ def processarTecladoPuzzle1():
     elif tecla == "*":
 
         partida.serialInput = partida.serialInput[:-1]
-
+        random.choice(clickSounds).play()
         updateScreenSerieLCD(
             partida.serialInput,
             0,
@@ -706,7 +705,7 @@ def processarTecladoPuzzle1():
     # ------------------------------------------
 
     elif tecla == "#":
-
+        random.choice(clickSounds).play()
         # Verifica se a senha digitada está correta
         if partida.serialInput == partida.serialPassword:
 
