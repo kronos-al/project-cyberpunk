@@ -1,5 +1,9 @@
 from RPLCD.i2c import CharLCD
-from gpiozero import LED as GpioLED
+from gpiozero import (
+    DigitalInputDevice,
+    DigitalOutputDevice
+)
+import time
 
 # ==========================================
 # CONFIGURAÇÃO DO DISPLAY DO CÓDIGO DE SERIE
@@ -24,41 +28,114 @@ def updateScreenSerieLCD(text:str, xCursor:int, yCursor:int, clearAll:bool, clea
 
 
 # ==========================================
-# CONFIGURAÇÃO DOS LEDS FÍSICOS
+# CONFIGURAÇÃO DO TECLADO MATRICIAL 4x3
+# GPIOs no padrão BCM
 # ==========================================
 
-# GPIOs em ordem: LED lógico 0 até LED lógico 9
-GPIOS = [17, 22, 24, 5, 16, 27, 23, 25, 6, 26]
-ledsFisicos = [GpioLED(gpio) for gpio in GPIOS]
+LINHAS = [27, 5, 25, 23]
+COLUNAS = [22, 17, 24]
+
+TECLAS = [
+    ["1", "2", "3"],
+    ["4", "5", "6"],
+    ["7", "8", "9"],
+    ["*", "0", "#"]
+]
+
+
+# Objetos do teclado
+_keypadRows = []
+_keypadCols = []
+
+_keypadConfigured = False
+_keypadKeyHeld = False
 
 
 # ==========================================
-# LIGAR OU DESLIGAR TODOS OS LEDS
+# INICIALIZAR TECLADO
+# Chamar apenas uma vez por execução
 # ==========================================
 
-def setAllLEDs(estado: bool):
-    for led in ledsFisicos:
-        led.on() if estado else led.off()
+def setupKeypad():
+    global _keypadRows, _keypadCols
+    global _keypadConfigured
+
+    # Evita configurar os GPIOs novamente
+    if _keypadConfigured:
+        return
+
+    # Linhas: saídas digitais
+    _keypadRows = [
+        DigitalOutputDevice(
+            pin,
+            active_high=True,
+            initial_value=False
+        )
+        for pin in LINHAS
+    ]
+
+    # Colunas: entradas com pull-down
+    _keypadCols = [
+        DigitalInputDevice(
+            pin,
+            pull_up=False
+        )
+        for pin in COLUNAS
+    ]
+
+    _keypadConfigured = True
+
+    print("[KEYPAD] Teclado matricial 4x3 inicializado.")
 
 
 # ==========================================
-# APLICAR CONFIGURAÇÃO DA BÚSSOLA
+# LER UMA TECLA
+# Retorna "0"..."9", "*" ou "#".
+# Retorna None quando nenhuma tecla nova é lida.
 # ==========================================
 
-def setCompassLEDs(configuracao: list):
-    """
-    Recebe uma lista de objetos LED definidos em bomb_logic.py.
-    """
+def readKeypad():
+    global _keypadKeyHeld
 
-    for led in configuracao:
-        if not 0 <= led.numero < len(ledsFisicos):
-            raise ValueError(f"Número de LED inválido: {led.numero}")
+    if not _keypadConfigured:
+        raise RuntimeError(
+            "Teclado não inicializado. Chame setupKeypad()."
+        )
 
-        ledFisico = ledsFisicos[led.numero]
+    teclaDetectada = None
 
-        if led.ligado:
-            ledFisico.on()
-        else:
-            ledFisico.off()
+    # Ativa uma linha por vez
+    for rowIndex, row in enumerate(_keypadRows):
+        row.on()
 
-    print("[LEDs] Configuração aplicada.")
+        # Pequena estabilização do sinal
+        time.sleep(0.001)
+
+        for colIndex, col in enumerate(_keypadCols):
+            if col.is_active:
+                teclaDetectada = TECLAS[rowIndex][colIndex]
+                break
+
+        row.off()
+
+        if teclaDetectada is not None:
+            break
+
+    # Nenhuma tecla pressionada: permite uma nova leitura
+    # na próxima pressão.
+    if teclaDetectada is None:
+        _keypadKeyHeld = False
+        return None
+
+    # Evita repetir a mesma tecla enquanto ela está pressionada
+    if _keypadKeyHeld:
+        return None
+
+    _keypadKeyHeld = True
+
+    # Debounce básico
+    time.sleep(0.02)
+
+    print(f"[KEYPAD] Tecla pressionada: {teclaDetectada}")
+
+    return teclaDetectada

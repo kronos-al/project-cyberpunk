@@ -8,7 +8,7 @@ import labyrinth
 
 from dataclasses import dataclass
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
-from physical_bomb_controller import updateScreenSerieLCD, setAllLEDs, setCompassLEDs
+from physical_bomb_controller import updateScreenSerieLCD, setupKeypad, readKeypad
 
 
 
@@ -86,6 +86,7 @@ class Partida:
 
         self.serialCode = None
         self.serialPassword = None
+        self.serialInput = ""
 
         self.tempoBomba = 300
         self.tempoBombaFormatado = "05:00"
@@ -103,6 +104,7 @@ class Partida:
         self.loop_ativo = False
 
 partida = Partida()
+setupKeypad()
 
 pygame.mixer.init()
 
@@ -111,6 +113,10 @@ beepBomb = pygame.mixer.Sound(
 )
 bombExplosion = pygame.mixer.Sound(
     "sounds/bomb_explosion.mp3"
+)
+
+puzzleFail = pygame.mixer.Sound(
+    "sounds/fail.mp3"
 )
 
 
@@ -147,7 +153,6 @@ def on_mqtt_message(client, msg):
             partida.id = int(dados["dados"]["idPartida"])
 
             labyrinth.resetPartida()
-            setAllLEDs(True)
             # ========================================
             # Responde para a partida
             # ========================================
@@ -249,8 +254,6 @@ def on_mqtt_message(client, msg):
             for led in partida.chosenLEDs:
                 print(f"LED {led.numero}: {'LIGADO' if led.ligado else 'DESLIGADO'}")
 
-            # Aplica a configuração nos LEDs físicos
-            setCompassLEDs(partida.chosenLEDs)
 
             # ==========================================
             # INICIAR TEMPO
@@ -622,6 +625,111 @@ def iniciarBeepBomba():
 
         time.sleep(intervalo)
 
+# ==========================================
+# PUZZLE 1 - ENTRADA DA SENHA PELO TECLADO
+# ==========================================
+
+def processarTecladoPuzzle1():
+    # Só permite digitar durante uma partida ativa
+    if partida.estado != "EM_PARTIDA":
+        return
+
+    # Não aceita mais entradas depois de resolver o puzzle
+    if partida.puzzle1:
+        return
+
+    tecla = readKeypad()
+
+    if tecla is None:
+        return
+
+    # ------------------------------------------
+    # DIGITAR NÚMEROS
+    # ------------------------------------------
+
+    if tecla.isdigit():
+
+        # Limita a entrada ao tamanho da senha
+        if (
+            partida.serialPassword is not None
+            and len(partida.serialInput) < len(partida.serialPassword)
+        ):
+            partida.serialInput += tecla
+
+            updateScreenSerieLCD(
+                partida.serialInput,
+                0,
+                1,
+                False,
+                True
+            )
+
+            print(
+                f"[PUZZLE 1] Entrada atual: "
+                f"{partida.serialInput}"
+            )
+
+    # ------------------------------------------
+    # * - APAGAR O ÚLTIMO DÍGITO
+    # ------------------------------------------
+
+    elif tecla == "*":
+
+        partida.serialInput = partida.serialInput[:-1]
+
+        updateScreenSerieLCD(
+            partida.serialInput,
+            0,
+            1,
+            False,
+            True
+        )
+
+        print(
+            f"[PUZZLE 1] Dígito apagado. "
+            f"Entrada atual: {partida.serialInput}"
+        )
+
+    # ------------------------------------------
+    # # - CONFIRMAR A SENHA
+    # ------------------------------------------
+
+    elif tecla == "#":
+
+        # Verifica se a senha digitada está correta
+        if partida.serialInput == partida.serialPassword:
+
+            partida.puzzle1 = True
+
+            updateScreenSerieLCD(
+                "CHAVE CORRETA",
+                0,
+                1,
+                False,
+                True
+            )
+
+            print("[PUZZLE 1] Senha correta! Puzzle concluído.")
+
+        else:
+
+            partida.falhas += 1
+            puzzleFail.play()
+            partida.serialInput = ""
+
+            # Limpa a segunda linha do LCD, sem exibir mensagem
+            updateScreenSerieLCD(
+                "",
+                0,
+                1,
+                False,
+                True
+            )
+
+            print(
+                f"[PUZZLE 1] Senha incorreta! "
+                f"Falhas: {partida.falhas}"
+            )
 def loopPartida(client):
     estadoAnteriorFalhas = 0
     partida.loop_ativo = True
@@ -692,7 +800,13 @@ def loopPartida(client):
         # VERIFICAR PUZZLES
         # ==========================================
 
-        # Puzzle 1
+        # ==========================================
+        # PUZZLE 1 - CHAVE DE INICIALIZAÇÃO
+        # ==========================================
+
+        if not partida.puzzle1:
+            processarTecladoPuzzle1()
+
         if partida.puzzle1:
             print("Puzzle 1 concluído!")
 
@@ -705,7 +819,6 @@ def loopPartida(client):
         # Puzzle 3
         if partida.puzzle3:
             print("Puzzle 3 concluído!")
-            setAllLEDs(False)
 
         if partida.puzzle5:
             print("Puzzle 5 concluído!")
