@@ -8,7 +8,7 @@ import labyrinth
 from dataclasses import dataclass
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
 from physical_bomb_controller import (updateTimeClock, updateScreenSerieLCD, setSerieLCDEnabled,blinkLCDCursor,
-                                      setupKeypad, readKeypad, updateFalhas, updatePuzzleLeds)
+                                      setupKeypad, readKeypad, updateFalhas, updatePuzzleLeds, atualizarTecladoVirtual)
 
 
 
@@ -838,6 +838,10 @@ def loopPartida(client):
 
         if not partida.puzzle1:
             processarTecladoPuzzle1()
+
+        if not partida.puzzle5:
+            atualizarTecladoVirtual()
+            return
 
 
 

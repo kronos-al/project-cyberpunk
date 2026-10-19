@@ -9,6 +9,10 @@ import json
 import board
 import busio
 from adafruit_ht16k33 import segments
+import adafruit_ads1x15.ads1115 as ADS
+from adafruit_ads1x15.analog_in import AnalogIn
+from evdev import UInput, ecodes
+
 
 # ==========================================
 # CONFIGURAÇÃO DO RELÓGIO DE TEMPO
@@ -232,3 +236,114 @@ def readKeypad():
     print(f"[KEYPAD] Tecla pressionada: {teclaDetectada}")
 
     return teclaDetectada
+
+
+# ==========================================
+# CONFIGURAÇÃO DO ADKEYBOARD
+# ==========================================
+
+i2c = busio.I2C(board.SCL, board.SDA)
+
+ads = ADS.ADS1115(i2c, address=0x48)
+canalTeclado = AnalogIn(ads, ADS.P0)
+
+# ==========================================
+# CRIAR TECLADO VIRTUAL DO LINUX
+# ==========================================
+
+teclasPermitidas = [
+    ecodes.KEY_LEFT,
+    ecodes.KEY_UP,
+    ecodes.KEY_DOWN,
+    ecodes.KEY_RIGHT,
+    ecodes.KEY_ENTER,
+]
+
+tecladoVirtual = UInput(
+    {ecodes.EV_KEY: teclasPermitidas},
+    name="Bomb.exe Virtual Keyboard"
+)
+
+# Mapeamento dos botões
+BOTOES_TECLADO = {
+    "esquerda": ecodes.KEY_LEFT,
+    "cima": ecodes.KEY_UP,
+    "baixo": ecodes.KEY_DOWN,
+    "direita": ecodes.KEY_RIGHT,
+    "selecionar": ecodes.KEY_ENTER,
+}
+
+teclaAtual = None
+
+
+# ==========================================
+# IDENTIFICAR BOTÃO PELA TENSÃO
+# ==========================================
+
+def identificarBotao(tensao):
+    if tensao > 3.1:
+        return None
+    elif tensao < 0.15:
+        return "esquerda"
+    elif 0.3 <= tensao < 0.7:
+        return "cima"
+    elif 0.8 <= tensao < 1.3:
+        return "baixo"
+    elif 1.4 <= tensao < 2.0:
+        return "direita"
+    elif 2.1 <= tensao < 2.8:
+        return "selecionar"
+
+    return None
+
+
+# ==========================================
+# ATUALIZAR TECLADO VIRTUAL
+# Chamar no loop existente do jogo
+# ==========================================
+
+def atualizarTecladoVirtual():
+    global teclaAtual
+
+    botao = identificarBotao(canalTeclado.voltage)
+    novaTecla = BOTOES_TECLADO.get(botao)
+
+    # Não gera eventos repetidos enquanto segura
+    # o mesmo botão
+    if novaTecla == teclaAtual:
+        return
+
+    # Solta a tecla anterior
+    if teclaAtual is not None:
+        tecladoVirtual.write(
+            ecodes.EV_KEY, teclaAtual, 0
+        )
+        tecladoVirtual.syn()
+
+    teclaAtual = novaTecla
+
+    # Pressiona a nova tecla
+    if teclaAtual is not None:
+        tecladoVirtual.write(
+            ecodes.EV_KEY, teclaAtual, 1
+        )
+        tecladoVirtual.syn()
+
+
+# ==========================================
+# ENCERRAR TECLADO VIRTUAL
+# ==========================================
+
+def encerrarTecladoVirtual():
+    global teclaAtual
+
+    if teclaAtual is not None:
+        tecladoVirtual.write(
+            ecodes.EV_KEY, teclaAtual, 0
+        )
+        tecladoVirtual.syn()
+        teclaAtual = None
+
+    tecladoVirtual.close()
+
+
