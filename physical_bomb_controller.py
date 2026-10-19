@@ -245,7 +245,7 @@ def readKeypad():
 i2c = busio.I2C(board.SCL, board.SDA)
 
 ads = ADS.ADS1115(i2c, address=0x48)
-canalTeclado = AnalogIn(ads, ADS.P0)
+canalTeclado = AnalogIn(ads, 0)
 
 # ==========================================
 # CRIAR TECLADO VIRTUAL DO LINUX
