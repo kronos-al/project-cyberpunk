@@ -237,18 +237,16 @@ def readKeypad():
 
     return teclaDetectada
 
-
 # ==========================================
-# CONFIGURAÇÃO DO ADKEYBOARD
+# ADKEYBOARD / ADS1115
 # ==========================================
-
-i2c = busio.I2C(board.SCL, board.SDA)
 
 ads = ADS.ADS1115(i2c, address=0x48)
 canalTeclado = AnalogIn(ads, 0)
 
+
 # ==========================================
-# CRIAR TECLADO VIRTUAL DO LINUX
+# TECLADO VIRTUAL DO LINUX
 # ==========================================
 
 teclasPermitidas = [
@@ -264,7 +262,6 @@ tecladoVirtual = UInput(
     name="Bomb.exe Virtual Keyboard"
 )
 
-# Mapeamento dos botões
 BOTOES_TECLADO = {
     "esquerda": ecodes.KEY_LEFT,
     "cima": ecodes.KEY_UP,
@@ -273,7 +270,16 @@ BOTOES_TECLADO = {
     "selecionar": ecodes.KEY_ENTER,
 }
 
+# Tecla virtual atualmente pressionada
 teclaAtual = None
+
+# Estado usado no debounce do ADKeyboard
+_botaoCandidato = None
+_tempoCandidato = 0.0
+_botaoEstavel = None
+
+# Tempo mínimo para confirmar uma mudança de botão
+TEMPO_DEBOUNCE = 0.04
 
 
 # ==========================================
@@ -283,51 +289,92 @@ teclaAtual = None
 def identificarBotao(tensao):
     if tensao > 3.1:
         return None
-    elif tensao < 0.15:
+
+    if tensao < 0.15:
         return "esquerda"
-    elif 0.3 <= tensao < 0.7:
+
+    if 0.3 <= tensao < 0.7:
         return "cima"
-    elif 0.8 <= tensao < 1.3:
+
+    if 0.8 <= tensao < 1.3:
         return "baixo"
-    elif 1.4 <= tensao < 2.0:
+
+    if 1.4 <= tensao < 2.0:
         return "direita"
-    elif 2.1 <= tensao < 2.8:
+
+    if 2.1 <= tensao < 2.8:
         return "selecionar"
 
+    # Região sem botão reconhecido
     return None
 
 
 # ==========================================
+# ENVIAR EVENTO AO TECLADO VIRTUAL
+# ==========================================
+
+def enviarTeclaVirtual(tecla, pressionada):
+    tecladoVirtual.write(
+        ecodes.EV_KEY,
+        tecla,
+        1 if pressionada else 0
+    )
+    tecladoVirtual.syn()
+
+
+# ==========================================
 # ATUALIZAR TECLADO VIRTUAL
-# Chamar no loop existente do jogo
+# Chamar continuamente no while True
 # ==========================================
 
 def atualizarTecladoVirtual():
     global teclaAtual
+    global _botaoCandidato
+    global _tempoCandidato
+    global _botaoEstavel
 
-    botao = identificarBotao(canalTeclado.voltage)
-    novaTecla = BOTOES_TECLADO.get(botao)
-
-    # Não gera eventos repetidos enquanto segura
-    # o mesmo botão
-    if novaTecla == teclaAtual:
+    # Lê a tensão atual do ADS1115
+    try:
+        tensao = canalTeclado.voltage
+    except Exception as erro:
+        print(f"[ADKEYBOARD] Erro na leitura: {erro}")
         return
 
-    # Solta a tecla anterior
-    if teclaAtual is not None:
-        tecladoVirtual.write(
-            ecodes.EV_KEY, teclaAtual, 0
-        )
-        tecladoVirtual.syn()
+    botaoLido = identificarBotao(tensao)
+    agora = time.monotonic()
 
-    teclaAtual = novaTecla
+    # Detecta mudança no botão lido e inicia o debounce
+    if botaoLido != _botaoCandidato:
+        _botaoCandidato = botaoLido
+        _tempoCandidato = agora
+        return
 
-    # Pressiona a nova tecla
+    # Aguarda a leitura estabilizar
+    if agora - _tempoCandidato < TEMPO_DEBOUNCE:
+        return
+
+    # Não houve mudança no botão estável
+    if botaoLido == _botaoEstavel:
+        return
+
+    _botaoEstavel = botaoLido
+
+    novaTecla = BOTOES_TECLADO.get(botaoLido)
+
+    # Libera a tecla anterior antes de pressionar outra
     if teclaAtual is not None:
-        tecladoVirtual.write(
-            ecodes.EV_KEY, teclaAtual, 1
+        enviarTeclaVirtual(teclaAtual, False)
+        teclaAtual = None
+
+    # Pressiona a nova tecla, se houver
+    if novaTecla is not None:
+        enviarTeclaVirtual(novaTecla, True)
+        teclaAtual = novaTecla
+
+        print(
+            f"[ADKEYBOARD] {botaoLido} "
+            f"(tensão: {tensao:.3f} V)"
         )
-        tecladoVirtual.syn()
 
 
 # ==========================================
@@ -338,12 +385,12 @@ def encerrarTecladoVirtual():
     global teclaAtual
 
     if teclaAtual is not None:
-        tecladoVirtual.write(
-            ecodes.EV_KEY, teclaAtual, 0
-        )
-        tecladoVirtual.syn()
+        enviarTeclaVirtual(teclaAtual, False)
         teclaAtual = None
 
     tecladoVirtual.close()
 
+
+# Libera o dispositivo virtual quando o Python encerrar
+atexit.register(encerrarTecladoVirtual)
 
