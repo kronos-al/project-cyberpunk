@@ -35,7 +35,12 @@ def updateTimeClock(time:str):
         timeClock.print("8888")
 
 def turnOffTimeClock():
-    timeClock.fill(0)
+    try:
+        timeClock.colon = False  # Desliga o sinal de dois-pontos
+        timeClock.fill(0)        # Limpa o buffer de dígitos
+        timeClock.show()        # Envia a atualização física para o display
+    except Exception as e:
+        print(f"[7-SEGMENTOS] Erro ao desligar relógio: {e}")
 # ==========================================
 # COMUNICAÇÃO SERIAL
 # ==========================================

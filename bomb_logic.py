@@ -738,8 +738,8 @@ def processarTecladoPuzzle1():
                 "",
                 0,
                 1,
-                True,
-                False
+                False,
+                True
             )
             print("[PUZZLE 1] Senha correta! Puzzle concluído.")
 
