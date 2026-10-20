@@ -915,9 +915,7 @@ def loopPartida(client):
 
         if (
             partida.puzzle1
-            and partida.puzzle2
             and partida.puzzle3
-            and partida.puzzle4
             and partida.puzzle5
         ):
             partida.vitoria = True
@@ -925,6 +923,35 @@ def loopPartida(client):
 
             print("TODOS OS PUZZLES CONCLUÍDOS!")
             print("VITÓRIA!")
+
+            # ========================================
+            # Responde para a partida
+            # ========================================
+
+            topico_resposta = f"bombexe/{partida.id}/bomba/server"
+
+            mensagem_resposta = {
+                "estado": "FIM_DE_JOGO",
+                "dados": {
+                    "idPartida": partida.id,
+                    "erros": partida.falhas,
+                    "tempo": partida.tempoBomba,
+                    "resultado": "VITORIA",
+                    "puzzles": {
+                        "chaveDeInicializacao": partida.puzzle1,
+                        "ajusteDeSintonizacao": partida.puzzle2,
+                        "bussolaDeLeds": partida.puzzle3,
+                        "fios": partida.puzzle4,
+                        "labirinto": partida.puzzle5
+                    }
+                }
+            }
+
+            client.publish(
+                topico_resposta,
+                json.dumps(mensagem_resposta),
+                qos=1
+            )
 
             partida.loop_ativo = False
             break
