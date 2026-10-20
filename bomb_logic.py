@@ -841,7 +841,6 @@ def loopPartida(client):
 
         if not partida.puzzle5:
             processarTecladoVirtual()
-            return
 
 
 

@@ -309,6 +309,7 @@ def processarTecladoVirtual():
 
     try:
         tensao_atual = _canal_ads.voltage
+        print("Tensao atual", tensao_atual)
         botao_atual = _identificar_botao(tensao_atual)
 
         # Detecta o momento exato em que um novo botão é pressionado (Borda de Subida)
