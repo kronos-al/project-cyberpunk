@@ -4,7 +4,7 @@ import math
 import random
 
 from bomb_logic import puzzleSolvedSound
-from physical_bomb_controller import updateFalhas, turnOffAllLeds, updateScreenSerieLCD, setSerieLCDEnabled, turnOffTimeClock
+from physical_bomb_controller import updateFalhas, turnOffAllLeds, updateScreenSerieLCD, setSerieLCDEnabled, turnOffTimeClock, setGPIO6
 
 # ==========================================
 # CONFIGURAÇÃO
@@ -481,4 +481,5 @@ def executarJogo():
     updateScreenSerieLCD("", 0, 0, True, False)
     setSerieLCDEnabled(False)
     turnOffTimeClock()
+    setGPIO6(False)
     pygame.quit()

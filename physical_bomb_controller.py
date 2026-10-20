@@ -424,3 +424,15 @@ def verificarCliqueBotaoPuzzle3():
         _estado_botao_anterior = False
 
     return None
+
+# ==========================================
+# CONFIGURAÇÃO DO FAN
+# ==========================================
+
+gpio6 = DigitalOutputDevice(6, initial_value=False)
+
+def setGPIO6(ligado: bool):
+    if ligado:
+        gpio6.on()
+    else:
+        gpio6.off()

@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
 from physical_bomb_controller import (updateTimeClock, updateScreenSerieLCD, setSerieLCDEnabled,blinkLCDCursor,
                                       setupKeypad, readKeypad, updateFalhas, updatePuzzleLeds, processarTecladoVirtual,
-                                      verificarCliqueBotaoPuzzle3)
+                                      verificarCliqueBotaoPuzzle3, setGPIO6)
 
 
 
@@ -319,6 +319,8 @@ def on_mqtt_message(client, msg):
             ).start()
 
             labyrinth.iniciarPartida(partida)
+
+            setGPIO6(True)
             # ==========================================
             # AVISAR QUE A PARTIDA COMEÇOU
             # ==========================================
@@ -862,6 +864,7 @@ def loopPartida(client):
             )
             bombExplosion.play()
             partida.timer_ativo = False
+            setGPIO6(False)
             partida.loop_ativo = False
             break
 
@@ -954,6 +957,7 @@ def loopPartida(client):
             )
             print("MQTT final enviado")
             partida.timer_ativo = False
+            setGPIO6(False)
             partida.loop_ativo = False
             break
 
