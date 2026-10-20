@@ -775,14 +775,14 @@ def obter_angulo_alvo(chave_configuracao: str) -> int:
         return 0
 
 
-def validar_posicao_potenciometro(porcentagem_leitura: float, chave_esperada: str, tolerancia: float = 12.0) -> bool:
+def validar_posicao_potenciometro(porcentagem_leitura: float, chave_esperada: str, tolerancia: float = 20.0) -> bool:
     """
     Mapeia a porcentagem lida para graus (0% a 100% -> 0° a 100°) e verifica se
     está dentro da margem de tolerância em relação ao ângulo alvo.
 
     :param porcentagem_leitura: Porcentagem lida no potenciômetro (0 a 100)
     :param chave_esperada: Chave da configuração sorteada (ex: "0_A", "50_B")
-    :param tolerancia: Margem de erro em graus para mais ou para menos (padrão: ±12°)
+    :param tolerancia: Margem de erro em graus para mais ou para menos (padrão: ±20°)
     """
     angulo_alvo = obter_angulo_alvo(chave_esperada)
 
@@ -890,7 +890,7 @@ def loopPartida(client):
                 sucesso = validar_posicao_potenciometro(
                     porcentagem_leitura=porcentagem_pot,
                     chave_esperada=partida.chosenLEDsButtonPosition,
-                    tolerancia=12.0  # Ajuste o valor da margem de erro se necessário
+                    tolerancia=20.0  # Ajuste o valor da margem de erro se necessário
                 )
 
                 if sucesso:
@@ -952,6 +952,7 @@ def loopPartida(client):
                 json.dumps(mensagem_resposta),
                 qos=1
             )
+            print("MQTT final enviado")
             partida.timer_ativo = False
             partida.loop_ativo = False
             break
