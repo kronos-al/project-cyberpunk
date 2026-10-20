@@ -879,30 +879,30 @@ def loopPartida(client):
             # PUZZLE 3 - BÚSSOLA DE LEDS / SINTONIZAÇÃO
             # ==========================================
 
-            if not partida.puzzle3:
-                # Verifica se o botão do GPIO 26 foi clicado
-                leitura_clique = verificarCliqueBotaoPuzzle3()
+        if not partida.puzzle3:
+            # Verifica se o botão do GPIO 26 foi clicado
+            leitura_clique = verificarCliqueBotaoPuzzle3()
 
-                if leitura_clique is not None:
-                    tensao_pot, porcentagem_pot = leitura_clique
-                    random.choice(clickSounds).play()
-                    # Valida se a posição do potenciômetro bate com o objetivo sorteado
-                    sucesso = validar_posicao_potenciometro(
-                        porcentagem_leitura=porcentagem_pot,
-                        chave_esperada=partida.chosenLEDsButtonPosition,
-                        tolerancia=12.0  # Ajuste o valor da margem de erro se necessário
-                    )
+            if leitura_clique is not None:
+                tensao_pot, porcentagem_pot = leitura_clique
+                random.choice(clickSounds).play()
+                # Valida se a posição do potenciômetro bate com o objetivo sorteado
+                sucesso = validar_posicao_potenciometro(
+                    porcentagem_leitura=porcentagem_pot,
+                    chave_esperada=partida.chosenLEDsButtonPosition,
+                    tolerancia=12.0  # Ajuste o valor da margem de erro se necessário
+                )
 
-                    if sucesso:
-                        print(">>> PUZZLE 3 CONCLUÍDO COM SUCESSO! <<<")
-                        puzzleSolvedSound.play()
-                        partida.puzzle3 = True
+                if sucesso:
+                    print(">>> PUZZLE 3 CONCLUÍDO COM SUCESSO! <<<")
+                    puzzleSolvedSound.play()
+                    partida.puzzle3 = True
 
-                    else:
-                        print(">>> POSIÇÃO INCORRETA DO POTENCIÔMETRO! <<<")
-                        puzzleFail.play()
-                        partida.falhas += 1  # Incrementa contagem de erros
-                        updateFalhas(partida.falhas)
+                else:
+                    print(">>> POSIÇÃO INCORRETA DO POTENCIÔMETRO! <<<")
+                    puzzleFail.play()
+                    partida.falhas += 1  # Incrementa contagem de erros
+                    updateFalhas(partida.falhas)
 
         if not partida.puzzle5:
             processarTecladoVirtual()
