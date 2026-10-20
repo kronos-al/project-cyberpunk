@@ -885,7 +885,7 @@ def loopPartida(client):
 
                 if leitura_clique is not None:
                     tensao_pot, porcentagem_pot = leitura_clique
-
+                    random.choice(clickSounds).play()
                     # Valida se a posição do potenciômetro bate com o objetivo sorteado
                     sucesso = validar_posicao_potenciometro(
                         porcentagem_leitura=porcentagem_pot,
