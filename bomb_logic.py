@@ -8,7 +8,8 @@ import labyrinth
 from dataclasses import dataclass
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
 from physical_bomb_controller import (updateTimeClock, updateScreenSerieLCD, setSerieLCDEnabled,blinkLCDCursor,
-                                      setupKeypad, readKeypad, updateFalhas, updatePuzzleLeds, processarTecladoVirtual)
+                                      setupKeypad, readKeypad, updateFalhas, updatePuzzleLeds, processarTecladoVirtual,
+                                      verificarCliqueBotaoPuzzle3)
 
 
 
@@ -838,7 +839,16 @@ def loopPartida(client):
 
         if not partida.puzzle1:
             processarTecladoPuzzle1()
+        if not partida.puzzle3:
+            # Verifica se o botão do GPIO 26 foi clicado
+            leitura_clique = verificarCliqueBotaoPuzzle3()
 
+            if leitura_clique is not None:
+                tensao_pot, porcentagem_pot = leitura_clique
+
+                # Aqui entra a sua lógica de validação da partida
+                # Exemplo: se o valor do pot estiver na faixa correta, conclui o puzzle
+                print(f"Validando Puzzle 3 com o valor: {porcentagem_pot}%")
         if not partida.puzzle5:
             processarTecladoVirtual()
 

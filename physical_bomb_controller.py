@@ -1,7 +1,8 @@
 from RPLCD.i2c import CharLCD
 from gpiozero import (
     DigitalInputDevice,
-    DigitalOutputDevice
+    DigitalOutputDevice,
+    Button
 )
 import time
 import serial
@@ -333,3 +334,88 @@ def processarTecladoVirtual():
 
     return None
 
+
+# Instâncias globais de hardware
+_canal_potenciometro = None
+_botao_puzzle3 = None
+_estado_botao_anterior = False
+
+
+def inicializarHardwarePuzzle3(i2c_bus=None):
+    """
+    Inicializa o potenciômetro no canal A1 do ADS1115 e
+    o botão físico do Puzzle 3 no GPIO 26.
+    """
+    global _canal_potenciometro, _botao_puzzle3
+    try:
+        if i2c_bus is None:
+            i2c_bus = busio.I2C(board.SCL, board.SDA)
+
+        ads = ADS.ADS1115(i2c_bus)
+
+        # Canal A1 para o potenciômetro
+        _canal_potenciometro = AnalogIn(ads, 1)
+
+        # Botão no GPIO 26 (Configurado com pull-up interno padrão da gpiozero)
+        _botao_puzzle3 = Button(26, pull_up=True)
+
+        print("[PUZZLE 3] Potenciômetro (A1) e Botão (GPIO 26) inicializados com sucesso.")
+    except Exception as e:
+        print(f"[PUZZLE 3] Erro ao inicializar hardware: {e}")
+
+inicializarHardwarePuzzle3(i2c)
+
+def lerPotenciometroA1():
+    """
+    Lê a tensão atual do canal A1 e calcula o valor relativo.
+    Retorna uma tupla: (tensao_em_volts, porcentagem_0_a_100)
+    """
+    if _canal_potenciometro is None:
+        return 0.0, 0
+
+    try:
+        tensao = _canal_potenciometro.voltage
+        porcentagem = int((tensao / 3.3) * 100)
+        porcentagem = max(0, min(100, porcentagem))
+        return tensao, porcentagem
+    except Exception as e:
+        print(f"[PUZZLE 3] Erro na leitura do A1: {e}")
+        return 0.0, 0
+
+
+def verificarCliqueBotaoPuzzle3():
+    """
+    Função para chamar repetidamente dentro do loop principal/puzzle.
+
+    Detecta o momento do clique único (pressionamento novo) do botão no GPIO 26.
+    Caso o botão seja pressionado, realiza e retorna a leitura do potenciômetro.
+
+    Retorna:
+        - (tensao, porcentagem) se o botão foi clicado.
+        - None se o botão não foi clicado nesta iteração.
+    """
+    global _estado_botao_anterior, _botao_puzzle3
+
+    if _botao_puzzle3 is None:
+        return None
+
+    # Verifica se o botão está fisicamente pressionado
+    botao_pressionado = _botao_puzzle3.is_pressed
+
+    # Transição: pressionado agora, mas não estava pressionado na leitura anterior
+    if botao_pressionado and not _estado_botao_anterior:
+        _estado_botao_anterior = True
+
+        # Lê a posição atual do potenciômetro no A1
+        tensao, porcentagem = lerPotenciometroA1()
+        print(f"[PUZZLE 3] Botão GPIO 26 Clicado! Potenciômetro (A1): {tensao:.3f}V ({porcentagem}%)")
+
+        # Pequena pausa para debounce físico do contato elétrico
+        time.sleep(0.05)
+        return tensao, porcentagem
+
+    # Reseta a trava quando o botão é solto
+    if not botao_pressionado:
+        _estado_botao_anterior = False
+
+    return None
