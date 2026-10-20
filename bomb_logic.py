@@ -952,7 +952,7 @@ def loopPartida(client):
                 json.dumps(mensagem_resposta),
                 qos=1
             )
-
+            partida.timer_ativo = False
             partida.loop_ativo = False
             break
 
