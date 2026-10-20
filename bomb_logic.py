@@ -901,7 +901,7 @@ def loopPartida(client):
                     else:
                         print(">>> POSIÇÃO INCORRETA DO POTENCIÔMETRO! <<<")
                         puzzleFail.play()
-
+                        updateFalhas(partida.falhas)
                         partida.falhas += 1  # Incrementa contagem de erros
 
         if not partida.puzzle5:
