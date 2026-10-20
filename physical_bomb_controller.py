@@ -9,15 +9,18 @@ import json
 import board
 import busio
 from adafruit_ht16k33 import segments
+
 import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
-from evdev import UInput, ecodes
+from pynput.keyboard import Key, Controller
+
 
 
 # ==========================================
 # CONFIGURAÇÃO DO RELÓGIO DE TEMPO
 # ==========================================
 i2c = busio.I2C(board.SCL, board.SDA)
+
 timeClock = segments.Seg7x4(i2c, address=0x70)
 timeClock.brightness = 1
 timeClock.colon = True
@@ -237,160 +240,95 @@ def readKeypad():
 
     return teclaDetectada
 
-# ==========================================
-# ADKEYBOARD / ADS1115
-# ==========================================
 
-ads = ADS.ADS1115(i2c, address=0x48)
-canalTeclado = AnalogIn(ads, 0)
+# Instâncias globais do teclado
+_keyboard = Controller()
+_canal_ads = None
+_botao_anterior = None
 
-
-# ==========================================
-# TECLADO VIRTUAL DO LINUX
-# ==========================================
-
-teclasPermitidas = [
-    ecodes.KEY_LEFT,
-    ecodes.KEY_UP,
-    ecodes.KEY_DOWN,
-    ecodes.KEY_RIGHT,
-    ecodes.KEY_ENTER,
-]
-
-tecladoVirtual = UInput(
-    {ecodes.EV_KEY: teclasPermitidas},
-    name="Bomb.exe Virtual Keyboard"
-)
-
-BOTOES_TECLADO = {
-    "esquerda": ecodes.KEY_LEFT,
-    "cima": ecodes.KEY_UP,
-    "baixo": ecodes.KEY_DOWN,
-    "direita": ecodes.KEY_RIGHT,
-    "selecionar": ecodes.KEY_ENTER,
+# Mapeamento dos botões analógicos para as teclas virtuais do sistema
+MAPEAMENTO_TECLAS = {
+    "S1": {"nome": "Esquerda", "tecla": Key.left},
+    "S2": {"nome": "Cima", "tecla": Key.up},
+    "S3": {"nome": "Baixo", "tecla": Key.down},
+    "S4": {"nome": "Direita", "tecla": Key.right},
+    "S5": {"nome": "Enter", "tecla": Key.enter}
 }
 
-# Tecla virtual atualmente pressionada
-teclaAtual = None
 
-# Estado usado no debounce do ADKeyboard
-_botaoCandidato = None
-_tempoCandidato = 0.0
-_botaoEstavel = None
+def inicializarTecladoVirtual(i2c_bus=None):
+    """
+    Inicializa o conversor ADS1115 no canal A0.
+    Você pode passar o objeto 'i2c' existente ou a função criará um novo.
+    """
+    global _canal_ads
+    try:
+        if i2c_bus is None:
+            i2c_bus = busio.I2C(board.SCL, board.SDA)
 
-# Tempo mínimo para confirmar uma mudança de botão
-TEMPO_DEBOUNCE = 0.04
+        ads = ADS.ADS1115(i2c_bus)
+        _canal_ads = AnalogIn(ads, 0)
+        print("[Bomb Exe Virtual Keyboard] ADS1115 inicializado no canal A0.")
+    except Exception as e:
+        print(f"[Bomb Exe Virtual Keyboard] Erro ao inicializar hardware ADS1115: {e}")
+
+inicializarTecladoVirtual(i2c)
 
 
-# ==========================================
-# IDENTIFICAR BOTÃO PELA TENSÃO
-# ==========================================
-
-def identificarBotao(tensao):
+def _identificar_botao(tensao: float):
+    """Identifica o código do botão com base na leitura da tensão em 3.3V."""
     if tensao > 3.1:
         return None
-
-    if tensao < 0.15:
-        return "esquerda"
-
-    if 0.3 <= tensao < 0.7:
-        return "cima"
-
-    if 0.8 <= tensao < 1.3:
-        return "baixo"
-
-    if 1.4 <= tensao < 2.0:
-        return "direita"
-
-    if 2.1 <= tensao < 2.8:
-        return "selecionar"
-
-    # Região sem botão reconhecido
-    return None
+    elif tensao < 0.15:
+        return "S1"
+    elif 0.3 <= tensao < 0.7:
+        return "S2"
+    elif 0.8 <= tensao < 1.3:
+        return "S3"
+    elif 1.4 <= tensao < 2.0:
+        return "S4"
+    elif 2.1 <= tensao < 2.8:
+        return "S5"
+    else:
+        return None
 
 
-# ==========================================
-# ENVIAR EVENTO AO TECLADO VIRTUAL
-# ==========================================
+def processarTecladoVirtual():
+    """
+    Função para chamar DENTRO do seu loop principal (uma única iteração).
 
-def enviarTeclaVirtual(tecla, pressionada):
-    tecladoVirtual.write(
-        ecodes.EV_KEY,
-        tecla,
-        1 if pressionada else 0
-    )
-    tecladoVirtual.syn()
+    Lê a tensão no A0, faz a identificação do botão, gerencia o debounce/transição
+    e simula o pressionamento da tecla no sistema operacional.
 
+    Retorna a tecla disparada ("S1"..."S5") ou None se nenhuma ação ocorreu.
+    """
+    global _botao_anterior, _canal_ads
 
-# ==========================================
-# ATUALIZAR TECLADO VIRTUAL
-# Chamar continuamente no while True
-# ==========================================
+    if _canal_ads is None:
+        return None
 
-def atualizarTecladoVirtual():
-    global teclaAtual
-    global _botaoCandidato
-    global _tempoCandidato
-    global _botaoEstavel
-
-    # Lê a tensão atual do ADS1115
     try:
-        tensao = canalTeclado.voltage
-    except Exception as erro:
-        print(f"[ADKEYBOARD] Erro na leitura: {erro}")
-        return
+        tensao_atual = _canal_ads.voltage
+        botao_atual = _identificar_botao(tensao_atual)
 
-    botaoLido = identificarBotao(tensao)
-    agora = time.monotonic()
+        # Detecta o momento exato em que um novo botão é pressionado (Borda de Subida)
+        if botao_atual and botao_atual != _botao_anterior:
+            info = MAPEAMENTO_TECLAS.get(botao_atual)
+            if info:
+                tecla = info["tecla"]
+                _keyboard.press(tecla)
+                _keyboard.release(tecla)
+                print(f"[Bomb Exe Keyboard] Tecla {info['nome']} ({tecla}) enviada! ({tensao_atual:.3f} V)")
 
-    # Detecta mudança no botão lido e inicia o debounce
-    if botaoLido != _botaoCandidato:
-        _botaoCandidato = botaoLido
-        _tempoCandidato = agora
-        return
+            _botao_anterior = botao_atual
+            return botao_atual
 
-    # Aguarda a leitura estabilizar
-    if agora - _tempoCandidato < TEMPO_DEBOUNCE:
-        return
+        # Se soltou o botão, reseta a trava do clique anterior
+        if botao_atual is None:
+            _botao_anterior = None
 
-    # Não houve mudança no botão estável
-    if botaoLido == _botaoEstavel:
-        return
+    except Exception as e:
+        print(f"[Bomb Exe Keyboard] Erro ao ler porta analógica: {e}")
 
-    _botaoEstavel = botaoLido
-
-    novaTecla = BOTOES_TECLADO.get(botaoLido)
-
-    # Libera a tecla anterior antes de pressionar outra
-    if teclaAtual is not None:
-        enviarTeclaVirtual(teclaAtual, False)
-        teclaAtual = None
-
-    # Pressiona a nova tecla, se houver
-    if novaTecla is not None:
-        enviarTeclaVirtual(novaTecla, True)
-        teclaAtual = novaTecla
-
-        print(
-            f"[ADKEYBOARD] {botaoLido} "
-            f"(tensão: {tensao:.3f} V)"
-        )
-
-
-# ==========================================
-# ENCERRAR TECLADO VIRTUAL
-# ==========================================
-
-def encerrarTecladoVirtual():
-    global teclaAtual
-
-    if teclaAtual is not None:
-        enviarTeclaVirtual(teclaAtual, False)
-        teclaAtual = None
-
-    tecladoVirtual.close()
-
-
-# Libera o dispositivo virtual quando o Python encerrar
-atexit.register(encerrarTecladoVirtual)
+    return None
 
