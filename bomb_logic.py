@@ -32,38 +32,38 @@ CONFIGURACOES_LED = {
         LED(5, False), LED(6, True),  LED(7, True),  LED(8, False), LED(9, True)
     ],
 
-    # 180° - configuração 1
-    "180_A": [
+    # 50° - configuração 1
+    "50_A": [
         LED(0, False), LED(1, True),  LED(2, True),  LED(3, False), LED(4, False),
         LED(5, True),  LED(6, True),  LED(7, True),  LED(8, True),  LED(9, False)
     ],
 
-    # 180° - configuração 2
-    "180_B": [
+    # 50° - configuração 2
+    "50_B": [
         LED(0, True),  LED(1, False), LED(2, True),  LED(3, False), LED(4, True),
         LED(5, False), LED(6, True),  LED(7, False), LED(8, False), LED(9, False)
     ],
 
-    # 270° - configuração 1
-    "270_A": [
+    # 75° - configuração 1
+    "75_A": [
         LED(0, False), LED(1, False), LED(2, False), LED(3, False), LED(4, True),
         LED(5, True),  LED(6, False), LED(7, False), LED(8, True),  LED(9, True)
     ],
 
-    # 270° - configuração 2
-    "270_B": [
+    # 75° - configuração 2
+    "75_B": [
         LED(0, False), LED(1, False), LED(2, False), LED(3, False), LED(4, True),
         LED(5, False), LED(6, False), LED(7, False), LED(8, True),  LED(9, True)
     ],
 
-    # 90° - configuração 1
-    "90_A": [
+    # 100° - configuração 1
+    "100_A": [
         LED(0, True),  LED(1, False), LED(2, True),  LED(3, True),  LED(4, True),
         LED(5, True),  LED(6, True),  LED(7, True),  LED(8, False), LED(9, True)
     ],
 
-     # 90° - configuração 2
-    "90_B": [
+     # 100° - configuração 2
+    "100_B": [
         LED(0, True),  LED(1, False), LED(2, True),  LED(3, True),  LED(4, False),
         LED(5, True),  LED(6, True),  LED(7, True),  LED(8, False), LED(9, True)
     ]
@@ -763,6 +763,42 @@ def processarTecladoPuzzle1():
                 f"[PUZZLE 1] Senha incorreta! "
                 f"Falhas: {partida.falhas}"
             )
+
+
+def obter_angulo_alvo(chave_configuracao: str) -> int:
+    """
+    Extrai o ângulo alvo a partir da chave (ex: "50_A" -> 50, "100_B" -> 100).
+    """
+    try:
+        return int(chave_configuracao.split("_")[0])
+    except (ValueError, IndexError):
+        return 0
+
+
+def validar_posicao_potenciometro(porcentagem_leitura: float, chave_esperada: str, tolerancia: float = 12.0) -> bool:
+    """
+    Mapeia a porcentagem lida para graus (0% a 100% -> 0° a 100°) e verifica se
+    está dentro da margem de tolerância em relação ao ângulo alvo.
+
+    :param porcentagem_leitura: Porcentagem lida no potenciômetro (0 a 100)
+    :param chave_esperada: Chave da configuração sorteada (ex: "0_A", "50_B")
+    :param tolerancia: Margem de erro em graus para mais ou para menos (padrão: ±12°)
+    """
+    angulo_alvo = obter_angulo_alvo(chave_esperada)
+
+    # O potenciômetro vai de 0% (0°) a 100% (100°)
+    angulo_medido = porcentagem_leitura
+
+    limite_inferior = angulo_alvo - tolerancia
+    limite_superior = angulo_alvo + tolerancia
+
+    esta_correto = limite_inferior <= angulo_medido <= limite_superior
+
+    print(
+        f"[PUZZLE 3] Alvo: {angulo_alvo}° | Medido: {angulo_medido:.1f}° | Tolerância: [{limite_inferior:.1f}° - {limite_superior:.1f}°]")
+
+    return esta_correto
+
 def loopPartida(client):
     estadoAnteriorFalhas = 0
     partida.loop_ativo = True
@@ -839,16 +875,35 @@ def loopPartida(client):
 
         if not partida.puzzle1:
             processarTecladoPuzzle1()
-        if not partida.puzzle3:
-            # Verifica se o botão do GPIO 26 foi clicado
-            leitura_clique = verificarCliqueBotaoPuzzle3()
+            # ==========================================
+            # PUZZLE 3 - BÚSSOLA DE LEDS / SINTONIZAÇÃO
+            # ==========================================
 
-            if leitura_clique is not None:
-                tensao_pot, porcentagem_pot = leitura_clique
+            if not partida.puzzle3:
+                # Verifica se o botão do GPIO 26 foi clicado
+                leitura_clique = verificarCliqueBotaoPuzzle3()
 
-                # Aqui entra a sua lógica de validação da partida
-                # Exemplo: se o valor do pot estiver na faixa correta, conclui o puzzle
-                print(f"Validando Puzzle 3 com o valor: {porcentagem_pot}%")
+                if leitura_clique is not None:
+                    tensao_pot, porcentagem_pot = leitura_clique
+
+                    # Valida se a posição do potenciômetro bate com o objetivo sorteado
+                    sucesso = validar_posicao_potenciometro(
+                        porcentagem_leitura=porcentagem_pot,
+                        chave_esperada=partida.chosenLEDsButtonPosition,
+                        tolerancia=12.0  # Ajuste o valor da margem de erro se necessário
+                    )
+
+                    if sucesso:
+                        print(">>> PUZZLE 3 CONCLUÍDO COM SUCESSO! <<<")
+                        puzzleSolvedSound.play()
+                        partida.puzzle3 = True
+
+                    else:
+                        print(">>> POSIÇÃO INCORRETA DO POTENCIÔMETRO! <<<")
+                        puzzleFail.play()
+
+                        partida.falhas += 1  # Incrementa contagem de erros
+
         if not partida.puzzle5:
             processarTecladoVirtual()
 
