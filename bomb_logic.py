@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
 from physical_bomb_controller import (updateTimeClock, updateScreenSerieLCD, setSerieLCDEnabled,blinkLCDCursor,
                                       setupKeypad, readKeypad, updateFalhas, updatePuzzleLeds, processarTecladoVirtual,
-                                      verificarCliqueBotaoPuzzle3, setGPIO6)
+                                      verificarCliqueBotaoPuzzle3, setGPIO6, updateSucessLeds)
 
 
 
@@ -202,6 +202,9 @@ def on_mqtt_message(client, msg):
                 LED(numero, True)
                 for numero in range(10)
             ])
+            updateSucessLeds(0, True)
+            updateSucessLeds(1, True)
+            updateSucessLeds(2, True)
             print(f"Publicado em: {topico_resposta}")
             print(f"Mensagem: {mensagem_resposta}")
 
@@ -286,6 +289,10 @@ def on_mqtt_message(client, msg):
 
             for led in partida.chosenLEDs:
                 print(f"LED {led.numero}: {'LIGADO' if led.ligado else 'DESLIGADO'}")
+
+            updateSucessLeds(0, False)
+            updateSucessLeds(1, False)
+            updateSucessLeds(2, False)
 
 
             # ==========================================
@@ -734,6 +741,7 @@ def processarTecladoPuzzle1():
         if partida.serialInput == partida.serialPassword:
 
             partida.puzzle1 = True
+            updateSucessLeds(0, True)
             puzzleSolvedSound.play()
             blinkLCDCursor(False)
             updateScreenSerieLCD(
@@ -900,6 +908,7 @@ def loopPartida(client):
                     print(">>> PUZZLE 3 CONCLUÍDO COM SUCESSO! <<<")
                     puzzleSolvedSound.play()
                     partida.puzzle3 = True
+                    updateSucessLeds(2, True)
 
                 else:
                     print(">>> POSIÇÃO INCORRETA DO POTENCIÔMETRO! <<<")

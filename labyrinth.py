@@ -4,7 +4,7 @@ import math
 import random
 
 from bomb_logic import puzzleSolvedSound
-from physical_bomb_controller import updateFalhas, turnOffAllLeds, updateScreenSerieLCD, setSerieLCDEnabled, turnOffTimeClock, setGPIO6
+from physical_bomb_controller import updateFalhas, turnOffAllLeds, updateScreenSerieLCD, setSerieLCDEnabled, turnOffTimeClock, setGPIO6, updateSucessLeds
 
 # ==========================================
 # CONFIGURAÇÃO
@@ -376,6 +376,7 @@ def executarJogo():
                             and tuple(playerPosition) in objetivos
                         ):
                             partidaAtual.puzzle5 = True
+                            updateSucessLeds(1, True)
                             puzzleSolvedSound.play()
                             animacaoInicio = pygame.time.get_ticks()
                             print("PUZZLE RESOLVIDO!")

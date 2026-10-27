@@ -80,6 +80,21 @@ def updatePuzzleLeds(leds):
     # Envia para a ESP32
     espSerial.write(json_string.encode("utf-8"))
 
+def updateSucessLeds(success_led: int, state: bool):
+    serial_json = {
+        "type": "success_led",
+        "data": {
+            "numero": success_led,
+            "ligado": state
+        }
+    }
+
+    # Converte para JSON e adiciona a quebra de linha
+    json_string = json.dumps(serial_json) + "\n"
+
+    # Envia para a ESP32
+    espSerial.write(json_string.encode("utf-8"))
+
 def turnOffAllLeds():
     serial_json = {
         "type": "general",
