@@ -741,7 +741,7 @@ def processarTecladoPuzzle1():
         if partida.serialInput == partida.serialPassword:
 
             partida.puzzle1 = True
-            updateSucessLeds(0, True)
+            updateSucessLeds(2, True)
             puzzleSolvedSound.play()
             blinkLCDCursor(False)
             updateScreenSerieLCD(
@@ -908,7 +908,7 @@ def loopPartida(client):
                     print(">>> PUZZLE 3 CONCLUÍDO COM SUCESSO! <<<")
                     puzzleSolvedSound.play()
                     partida.puzzle3 = True
-                    updateSucessLeds(2, True)
+                    updateSucessLeds(1, True)
 
                 else:
                     print(">>> POSIÇÃO INCORRETA DO POTENCIÔMETRO! <<<")

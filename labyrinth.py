@@ -376,7 +376,7 @@ def executarJogo():
                             and tuple(playerPosition) in objetivos
                         ):
                             partidaAtual.puzzle5 = True
-                            updateSucessLeds(1, True)
+                            updateSucessLeds(0, True)
                             puzzleSolvedSound.play()
                             animacaoInicio = pygame.time.get_ticks()
                             print("PUZZLE RESOLVIDO!")
