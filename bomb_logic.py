@@ -119,9 +119,6 @@ pygame.mixer.init()
 beepBomb = pygame.mixer.Sound(
     "sounds/beep_bomb.mp3"
 )
-bombExplosion = pygame.mixer.Sound(
-    "sounds/bomb_explosion.mp3"
-)
 
 puzzleFail = pygame.mixer.Sound(
     "sounds/fail.mp3"
@@ -139,17 +136,8 @@ puzzleSolvedSound = pygame.mixer.Sound(
     "sounds/puzzle_solved.mp3"
 )
 
-victorySound1 = pygame.mixer.Sound(
-    "sounds/victory1.mp3"
-)
-
-victorySound2 = pygame.mixer.Sound(
-    "sounds/victory2.mp3"
-)
 
 clickSounds = [keyboardSound1, keyboardSound2]
-victorySounds = [victorySound1, victorySound2]
-
 def on_mqtt_message(client, msg):
     global partida
     payload_str = msg.payload.decode("utf-8")
@@ -878,7 +866,6 @@ def loopPartida(client):
                 json.dumps(mensagem_resposta),
                 qos=1
             )
-            bombExplosion.play()
             partida.timer_ativo = False
             setGPIO6(False)
             partida.loop_ativo = False
@@ -975,7 +962,6 @@ def loopPartida(client):
             print("MQTT final enviado")
             partida.timer_ativo = False
             setGPIO6(False)
-            random.choice(victorySounds).play()
             partida.loop_ativo = False
             break
 
