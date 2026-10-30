@@ -772,6 +772,12 @@
     const GOOGLE_CLIENT_ID = "331191695151-ku8mdhd76pc2k36itas8lm722krn0u64.apps.googleusercontent.com";
     const TOKEN_STORAGE_KEY = "bombexe.admin.googleIdToken";
     const TOKEN_EXPIRY_MARGIN_MS = 60 * 1000;
+
+    // Renovação automática do ID token (o Google emite tokens de ~1h)
+    const REFRESH_LEAD_MS = 5 * 60 * 1000;        // renova quando faltarem 5 min para expirar
+    const REFRESH_RETRY_MS = 60 * 1000;           // nova tentativa se a renovação falhar
+    const SILENT_REFRESH_TIMEOUT_MS = 8000;       // tempo máx. esperando o Google responder
+
     const WS_RETRY_BASE_MS = 1000;
     const WS_RETRY_MAX_MS = 15000;
     const WS_MAX_ATTEMPTS = 10;
@@ -924,7 +930,16 @@
     }
 
     // =====================================================================
-    // AUTENTICAÇÃO (Google Identity Services -> ID token enviado no body)
+    // AUTENTICAÇÃO (Google Identity Services -> ID token no header Authorization)
+    //
+    // O ID token do Google dura ~1h e não pode ser estendido. Para o operador
+    // não ser deslogado, o painel renova o token sozinho:
+    //   1) de forma preventiva, REFRESH_LEAD_MS antes de expirar;
+    //   2) sob demanda, quando uma chamada à API encontra o token expirado;
+    //   3) ao abrir a página com um token vencido salvo.
+    // A renovação usa google.accounts.id.prompt() com auto_select: se o operador
+    // ainda tem sessão Google ativa, o token novo chega sem nenhuma interação.
+    // Só se isso falhar o modal de login é exibido.
     // =====================================================================
     const loginModal = document.getElementById("loginModal");
     const loginStatus = document.getElementById("loginStatus");
@@ -933,6 +948,9 @@
     let authToken = null;
     let googleInitialized = false;
     let googlePollTimer = null;
+    let refreshTimer = null;     // timer da renovação preventiva
+    let refreshPromise = null;   // renovação em andamento (evita pedidos duplicados)
+    let finishRefresh = null;    // resolve a renovação em andamento
 
     function decodeJwtPayload(jwt) {
       try {
@@ -975,10 +993,17 @@
       return authToken;
     }
 
+    // Token válido, renovando em silêncio se o atual expirou. Retorna null se não conseguir.
+    async function ensureToken() {
+      return getValidToken() || await silentRefresh();
+    }
+
     // Revoga o token: descarta localmente e impede que o Google reescolha a mesma conta sozinho.
     function revokeToken(reason) {
       authToken = null;
       clearStoredToken();
+      clearTimeout(refreshTimer);
+      refreshTimer = null;
       try { window.google?.accounts?.id?.disableAutoSelect(); } catch { /* biblioteca indisponível */ }
       log(`Token revogado // ${reason}.`, "warn");
     }
@@ -991,18 +1016,27 @@
 
     function handleCredential(response) {
       const jwt = response?.credential;
+      const refreshing = finishRefresh;   // havia uma renovação silenciosa esperando?
 
       if (!jwt || !isTokenUsable(jwt)) {
         loginStatus.textContent = "O Google devolveu um token inválido ou expirado. Tente novamente.";
         log("LOGIN // token recebido do Google inválido ou expirado.", "bad");
+        if (refreshing) refreshing(null);
         return;
       }
 
       authToken = jwt;
       storeToken(jwt);
+      scheduleProactiveRefresh();
       const payload = decodeJwtPayload(jwt);
       hideLogin();
-      log(`LOGIN OK // ${payload?.email || "operador"} autenticado.`, "good");
+
+      if (refreshing) {
+        log(`TOKEN renovado // ${payload?.email || "operador"} (sem novo login).`, "good");
+        refreshing(jwt);
+      } else {
+        log(`LOGIN OK // ${payload?.email || "operador"} autenticado.`, "good");
+      }
     }
 
     function initGoogle() {
@@ -1041,9 +1075,100 @@
           clearInterval(googlePollTimer);
           loginStatus.textContent = "Não foi possível carregar o login do Google (accounts.google.com bloqueado?).";
           log("LOGIN // biblioteca do Google não carregou.", "bad");
+          if (finishRefresh) finishRefresh(null);
         }
       }, 100);
     }
+
+    // Pede um token novo ao Google sem interação. Resolve com o JWT ou null.
+    // Chamadas simultâneas compartilham a mesma tentativa.
+    function silentRefresh() {
+      if (refreshPromise) return refreshPromise;
+
+      refreshPromise = new Promise(resolve => {
+        let done = false;
+        let timeout = null;
+
+        const finish = token => {
+          if (done) return;
+          done = true;
+          clearTimeout(timeout);
+          finishRefresh = null;
+          refreshPromise = null;
+          resolve(token);
+        };
+
+        finishRefresh = finish;
+
+        timeout = setTimeout(() => {
+          log("TOKEN // renovação silenciosa sem resposta do Google (timeout).", "warn");
+          finish(null);
+        }, SILENT_REFRESH_TIMEOUT_MS);
+
+        whenGoogleReady(() => {
+          if (done) return;
+          try {
+            window.google.accounts.id.prompt(notification => {
+              // Falha rápida quando o Google já sabe que não vai devolver credencial
+              // (ex.: sem sessão Google ativa, origem não autorizada, prompt suprimido).
+              try {
+                if (notification.isNotDisplayed?.()) {
+                  log(`TOKEN // renovação silenciosa indisponível (${notification.getNotDisplayedReason?.() || "motivo desconhecido"}).`, "warn");
+                  finish(null);
+                }
+              } catch { /* API de notificação indisponível neste modo (FedCM); vale o timeout */ }
+            });
+          } catch {
+            finish(null);
+          }
+        });
+      });
+
+      return refreshPromise;
+    }
+
+    // Agenda a renovação REFRESH_LEAD_MS antes do token atual expirar.
+    function scheduleProactiveRefresh(delayOverride) {
+      clearTimeout(refreshTimer);
+      refreshTimer = null;
+
+      const exp = authToken ? decodeJwtPayload(authToken)?.exp : null;
+      if (!exp) return;
+
+      const delay = delayOverride ?? Math.max(exp * 1000 - Date.now() - REFRESH_LEAD_MS, 1000);
+      refreshTimer = setTimeout(runProactiveRefresh, delay);
+    }
+
+    async function runProactiveRefresh() {
+      refreshTimer = null;
+      if (!authToken) return;
+
+      log("TOKEN // renovando sessão antes de expirar...", "cyan");
+      const renewed = await silentRefresh();
+      if (renewed) return;   // handleCredential já reagendou o próximo ciclo
+
+      // Falhou: tenta de novo enquanto o token atual ainda vale.
+      if (authToken && isTokenUsable(authToken)) {
+        log(`TOKEN // renovação automática falhou; nova tentativa em ${REFRESH_RETRY_MS / 1000}s.`, "warn");
+        scheduleProactiveRefresh(REFRESH_RETRY_MS);
+      } else {
+        log("TOKEN // renovação automática falhou; será necessário entrar novamente.", "warn");
+      }
+    }
+
+    // Timers ficam congelados com a aba em segundo plano / PC suspenso:
+    // ao voltar, confere se o token já está perto de vencer.
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible" || !authToken) return;
+
+      const exp = decodeJwtPayload(authToken)?.exp;
+      if (exp && exp * 1000 - Date.now() <= REFRESH_LEAD_MS) {
+        clearTimeout(refreshTimer);
+        runProactiveRefresh();
+      } else {
+        scheduleProactiveRefresh();
+      }
+    });
 
     // Exibe a tela de login. prompt=false evita o One Tap automático (ex.: após revogação).
     function showLogin({ message = "", prompt = true } = {}) {
@@ -1069,21 +1194,30 @@
       showLogin({ message: `${detail || fallback} Entre novamente com uma conta de operador.`, prompt: false });
     }
 
-    function initAuth() {
+    async function initAuth() {
+      const hadStoredSession = Boolean(readStoredToken());
       const token = getValidToken();
 
       if (token) {
         const payload = decodeJwtPayload(token);
+        scheduleProactiveRefresh();
         log(`LOGIN // sessão restaurada para ${payload?.email || "operador"}.`, "good");
         return;
+      }
+
+      // Havia uma sessão salva, mas vencida: tenta renovar sem pedir login.
+      if (hadStoredSession) {
+        log("LOGIN // sessão anterior expirada; tentando renovar automaticamente...", "cyan");
+        const renewed = await silentRefresh();
+        if (renewed) return;
       }
 
       log("LOGIN // autenticação necessária antes de operar o painel.", "warn");
       showLogin();
     }
 
-    async function postJson(path, body) {
-      const token = getValidToken();
+    async function postJson(path, body, { retried = false } = {}) {
+      const token = await ensureToken();
 
       if (!token) {
         showLogin({ message: "Sessão ausente ou expirada. Faça login para continuar." });
@@ -1113,6 +1247,15 @@
         data = raw ? JSON.parse(raw) : null;
       } catch {
         data = raw;
+      }
+
+      // O servidor recusou por expiração: renova e repete UMA vez.
+      // (Seguro repetir: a requisição foi barrada antes de executar a rota.)
+      if (response.status === 401 && data?.codigo === "TOKEN_EXPIRADO" && !retried) {
+        log("TOKEN // servidor informou token expirado; renovando e repetindo a chamada...", "warn");
+        authToken = null;
+        clearStoredToken();
+        return postJson(path, body, { retried: true });
       }
 
       if (response.status === 401 || response.status === 403) {
@@ -1518,4 +1661,4 @@
     initAuth();
   </script>
 </body>
-</html> 
+</html>
