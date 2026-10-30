@@ -22,11 +22,10 @@ app.use(
         path.join(__dirname, "frontend", "admin")
     )
 );
-
 app.use(
-    "/login",
+    "/stats",
     express.static(
-        path.join(__dirname, "frontend", "login")
+        path.join(__dirname, "frontend", "stats")
     )
 );
 
@@ -42,5 +41,10 @@ app.get("/admin", (req, res) => {
     );
 });
 
+app.get("/stats", (req, res) => {
+    res.sendFile(
+        path.join(__dirname, "frontend", "stats", "index.html")
+    );
+});
 
 module.exports = { app, httpServer};
