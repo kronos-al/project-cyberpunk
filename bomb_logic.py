@@ -139,8 +139,16 @@ puzzleSolvedSound = pygame.mixer.Sound(
     "sounds/puzzle_solved.mp3"
 )
 
+victorySound1 = pygame.mixer.Sound(
+    "sounds/victory1.mp3"
+)
+
+victorySound2 = pygame.mixer.Sound(
+    "sounds/victory2.mp3"
+)
 
 clickSounds = [keyboardSound1, keyboardSound2]
+victorySounds = [victorySound1, victorySound2]
 
 def on_mqtt_message(client, msg):
     global partida
@@ -967,6 +975,7 @@ def loopPartida(client):
             print("MQTT final enviado")
             partida.timer_ativo = False
             setGPIO6(False)
+            random.choice(victorySounds).play()
             partida.loop_ativo = False
             break
 
