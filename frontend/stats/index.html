@@ -67,6 +67,17 @@ tr.cl{cursor:pointer}tr.cl:hover td{background:rgba(141,255,117,.05)}
 .mc{width:min(520px,100%);padding:26px;border:1px solid var(--line);background:linear-gradient(180deg,#0c1111,#050808)}
 .mc h2{margin-top:9px;color:#f4f6f4;font-size:22px}.mc p{margin-top:12px;color:#a39b9b;font-size:12px;line-height:1.8}.mc strong{color:var(--terminal)}
 #gbtn{margin-top:18px;min-height:44px}#lst{min-height:18px;margin-top:14px;color:var(--warning);font-size:11px;line-height:1.7}
+select,input[type=text],input[type=number]{min-height:38px;padding:0 9px;color:var(--terminal);background:#07100b;border:1px solid rgba(141,255,117,.25);color-scheme:dark;outline:none;font:inherit;font-size:10px}
+input::placeholder{color:#4f6353}
+.btn:disabled{opacity:.3;cursor:not-allowed}
+.rk{padding:22px;border:1px solid var(--terminal);background:linear-gradient(180deg,rgba(141,255,117,.1),rgba(141,255,117,.01));box-shadow:0 0 26px rgba(141,255,117,.08)}
+.rk small{color:var(--terminal);font-size:10px;letter-spacing:.14em}.rk b{display:block;margin:10px 0 6px;font-size:clamp(44px,7vw,72px);line-height:.9;color:#eff9ef;letter-spacing:-.07em}.rk span{color:#9aac9b;font-size:11px}
+.rs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.cl2{cursor:pointer;transition:.15s}.rk.cl2:hover,.kpi.cl2:hover{border-color:var(--terminal)}
+.srch{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.pgr{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:14px;font-size:10px;color:var(--muted)}
+#pm .mc{width:min(640px,100%);max-height:90vh;overflow:auto}
+@media(max-width:900px){.rs{grid-template-columns:1fr}}
 @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.g2,.g3,.two{grid-template-columns:1fr}.hb{grid-template-columns:110px 1fr 44px}.topbar nav{display:none}}
 </style>
 </head>
@@ -86,12 +97,14 @@ tr.cl{cursor:pointer}tr.cl:hover td{background:rgba(141,255,117,.05)}
     <div><label for="de">DE</label><input type="date" id="de"></div>
     <div><label for="ate">ATÉ</label><input type="date" id="ate"></div>
     <button class="btn" data-d="7">7 DIAS</button><button class="btn" data-d="30">30 DIAS</button><button class="btn on" data-d="">TUDO</button>
-    <div class="sp"></div>
+    <div id="fj"></div><div class="sp"></div>
     <button class="btn" id="rf">[ ATUALIZAR ]</button>
   </div>
   <div class="err" id="err"></div>
 
   <section class="kpis" id="kpis"></section>
+
+  <section class="panel" style="margin-bottom:14px"><div class="ph"><div class="pc">RECORDES</div><div class="pt">PARTIDA MAIS RÁPIDA E PÓDIO (CLIQUE PARA ABRIR)</div></div><div class="pb" id="recs"></div></section>
 
   <section class="g2">
     <div class="panel"><div class="ph"><div class="pc">01 // SÉRIE TEMPORAL</div><div class="pt">PARTIDAS E TAXA DE SUCESSO POR DIA</div></div>
@@ -110,11 +123,24 @@ tr.cl{cursor:pointer}tr.cl:hover td{background:rgba(141,255,117,.05)}
 
   <section class="panel jd" id="jd"><div class="ph"><div class="pc">06 // DOSSIÊ</div><div class="pt" id="jdt"></div></div><div class="pb" id="jdb"></div></section>
 
-  <section class="panel"><div class="ph"><div class="pc">07 // REGISTRO</div><div class="pt">ÚLTIMAS PARTIDAS</div></div>
-    <div class="pb scroll" id="rec"></div></section>
+  <section class="panel"><div class="ph"><div class="pc">07 // REGISTRO</div><div class="pt">PESQUISA DE PARTIDAS</div></div>
+    <div class="pb">
+      <div class="srch">
+        <input type="text" id="sn" placeholder="BUSCAR JOGADOR (NOME)" style="flex:1;min-width:170px">
+        <select id="se"></select>
+        <select id="sr"><option value="">RESULTADO: TODOS</option><option>VITORIA</option><option>DERROTA</option></select>
+        <select id="so"><option value="recentes">MAIS RECENTES</option><option value="antigas">MAIS ANTIGAS</option><option value="rapidas">MAIS RÁPIDAS</option><option value="lentas">MAIS LENTAS</option><option value="erros">MAIS ERROS</option></select>
+        <select id="sl"><option>10</option><option selected>20</option><option>50</option><option>100</option></select>
+        <button class="btn" id="sb">[ BUSCAR ]</button>
+        <input type="number" id="sid" placeholder="Nº PARTIDA" min="1" style="width:110px"><button class="btn" id="sg">[ ABRIR ]</button>
+      </div>
+      <div class="scroll" id="rec"></div><div class="pgr" id="pg"></div>
+    </div></section>
 
   <div class="foot"><span>BOMB.EXE</span> // ANALYTICS NODE // NEO CITY 2149</div>
 </main>
+
+<div class="modal" id="pm"><div class="mc" id="pmb"></div></div>
 
 <div class="modal" id="login">
   <div class="mc">
@@ -250,12 +276,49 @@ async function detail(id){
     const j=await api("/stats/jogadores/"+encodeURIComponent(id),q),g=j.geral;
     $("jdt").textContent=(j.nome||j.id).toUpperCase()+" // ID "+j.id;
     const papel=(n,p)=>`<div><div class="pc" style="margin-bottom:10px">${n}</div>${p?hbar("VITÓRIAS",p.taxaVitoria,pct(p.taxaVitoria),"cy")+`<div class="legend"><span>${p.partidas} partidas // ${dur(p.tempoMedioMs)} // ${p.errosMedios} erros</span></div>`:empty("NUNCA JOGOU")}</div>`;
-    $("jdb").innerHTML=`<div class="kpis" style="grid-template-columns:repeat(4,1fr)"><div class="kpi"><small>PARTIDAS</small><b>${g.partidas}</b></div><div class="kpi"><small>VITÓRIA</small><b>${pct(g.taxaVitoria)}</b></div><div class="kpi"><small>TEMPO</small><b>${dur(g.tempoMedioMs)}</b></div><div class="kpi"><small>ERROS</small><b>${g.errosMedios??"--"}</b></div></div><div class="two">${papel("EDE // OPERADOR DA BOMBA",j.porPapel.EDE)}${papel("EIT // INTÉRPRETE DO TERMINAL",j.porPapel.EIT)}</div><div class="scroll" style="margin-top:14px"><table><tr><th>PARTIDA</th><th>DATA</th><th>RESULTADO</th><th>ERROS</th></tr>${j.historico.map(h=>`<tr><td>#${h._id}</td><td>${new Date(h.createdAt).toLocaleString("pt-BR")}</td><td>${resTag(h.resultado)}</td><td>${h.bomba?.erros??"--"}</td></tr>`).join("")}</table></div>`;
+    $("jdb").innerHTML=`<button class="btn" id="fb" style="margin-bottom:14px">[ FILTRAR TODO O PAINEL POR ESTE AGENTE ]</button><div class="kpis" style="grid-template-columns:repeat(4,1fr)"><div class="kpi"><small>PARTIDAS</small><b>${g.partidas}</b></div><div class="kpi"><small>VITÓRIA</small><b>${pct(g.taxaVitoria)}</b></div><div class="kpi"><small>TEMPO</small><b>${dur(g.tempoMedioMs)}</b></div><div class="kpi"><small>ERROS</small><b>${g.errosMedios??"--"}</b></div></div><div class="two">${papel("EDE // OPERADOR DA BOMBA",j.porPapel.EDE)}${papel("EIT // INTÉRPRETE DO TERMINAL",j.porPapel.EIT)}</div><div class="scroll" style="margin-top:14px"><table><tr><th>PARTIDA</th><th>DATA</th><th>RESULTADO</th><th>ERROS</th></tr>${j.historico.map(h=>`<tr><td>#${h._id}</td><td>${new Date(h.createdAt).toLocaleString("pt-BR")}</td><td>${resTag(h.resultado)}</td><td>${h.bomba?.erros??"--"}</td></tr>`).join("")}</table></div>`;
+    $("fb").onclick=()=>setFoco(j.id,j.nome);
   }catch(e){if(!["login","auth"].includes(e.message))$("jdt").textContent="FALHA: "+e.message}
 }
-function recent(r){
-  const d=r?.dados;
-  $("rec").innerHTML=d?.length?`<table><tr><th>#</th><th>DATA</th><th>EDE</th><th>EIT</th><th>ESTADO</th><th>RESULTADO</th><th>ERROS</th></tr>${d.map(x=>`<tr><td>${x._id}</td><td>${new Date(x.createdAt).toLocaleString("pt-BR")}</td><td>${esc(x.jogadores?.EDE?.nome||"--")}</td><td>${esc(x.jogadores?.EIT?.nome||"--")}</td><td>${tag(x.estado,x.estado==="FIM_DE_JOGO"?"":"w")}</td><td>${resTag(x.resultado)}</td><td>${x.bomba?.erros??"--"}</td></tr>`).join("")}</table>`:empty();
+const ESTADOS=["AGUARDANDO_PARTIDA","CONFIGURANDO_BOMBA","CONFIGURAR_FIOS","AGUARDANDO_JOGADORES","CADASTRAR_JOGADORES","CADASTRANDO_JOGADORES","ADICIONAR_JOGADORES","AGUARDANDO_INICIO_DA_PARTIDA","COMECAR_PARTIDA","EM_PARTIDA","FIM_DE_JOGO","PARTIDA_FINALIZADA"];
+let foco=null,pag=1,pags=1;
+const names=x=>`${esc(x.jogadores?.EDE?.nome||"--")} / ${esc(x.jogadores?.EIT?.nome||"--")}`;
+const isErr=e=>["login","auth"].includes(e.message);
+function setFoco(id,nome){
+  foco=id||null;pag=1;
+  $("fj").innerHTML=foco?`<span class="tag g">FOCO: ${esc(nome||id)} <a href="#" id="fx">✕</a></span>`:"";
+  if(foco)$("fx").onclick=e=>{e.preventDefault();setFoco(null)};
+  $("jd").classList.remove("v");load();
+}
+function records(r){
+  const m=r?.maisRapida;
+  if(!m){$("recs").innerHTML=empty("NENHUMA VITÓRIA COM TEMPO REGISTRADO");return}
+  const mini=(t,x)=>x?`<div class="kpi cl2" data-p="${x._id}"><small>${t}</small><b>${dur(x.duracaoMs)}</b><span>#${x._id} // ${names(x)} // ${x.bomba?.erros??0} erro(s)</span></div>`:"";
+  $("recs").innerHTML=`<div class="rk cl2" data-p="${m._id}"><small>PARTIDA MAIS RÁPIDA // VITÓRIA</small><b>${dur(m.duracaoMs)}</b><span>#${m._id} // ${names(m)} // ${m.bomba?.erros??0} erro(s) // ${new Date(m.createdAt).toLocaleDateString("pt-BR")}</span></div><div class="rs">${mini("MAIS RÁPIDA SEM ERROS",r.maisRapidaSemErros)||empty("SEM VITÓRIA SEM ERROS")}${mini("VITÓRIA MAIS LENTA",r.maisLenta)}</div><div class="scroll"><table style="margin-top:14px"><tr><th>PÓDIO</th><th>PARTIDA</th><th>DUPLA (EDE / EIT)</th><th>TEMPO</th><th>ERROS</th></tr>${r.podio.map((x,i)=>`<tr class="cl" data-p="${x._id}"><td>${i+1}º</td><td>#${x._id}</td><td>${names(x)}</td><td>${dur(x.duracaoMs)}</td><td>${x.bomba?.erros??0}</td></tr>`).join("")}</table></div>`;
+  $("recs").querySelectorAll("[data-p]").forEach(e=>e.onclick=()=>openPartida(e.dataset.p));
+}
+async function loadRec(p){
+  pag=p||1;
+  const q={de:$("de").value,ate:$("ate").value,jogador:foco,nome:$("sn").value.trim(),estado:$("se").value,resultado:$("sr").value,ordenarPor:$("so").value,limite:$("sl").value,pagina:pag};
+  try{
+    const r=await api("/partidas",q);pags=r.paginacao.totalPaginas||1;
+    $("rec").innerHTML=r.dados.length?`<table><tr><th>#</th><th>DATA</th><th>EDE</th><th>EIT</th><th>ESTADO</th><th>RESULTADO</th><th>TEMPO</th><th>ERROS</th></tr>${r.dados.map(x=>`<tr class="cl" data-p="${x._id}"><td>${x._id}</td><td>${new Date(x.createdAt).toLocaleString("pt-BR")}</td><td>${esc(x.jogadores?.EDE?.nome||"--")}</td><td>${esc(x.jogadores?.EIT?.nome||"--")}</td><td>${tag(x.estado,x.estado==="FIM_DE_JOGO"?"":"w")}</td><td>${resTag(x.resultado)}</td><td>${dur(x.duracaoMs)}</td><td>${x.bomba?.erros??"--"}</td></tr>`).join("")}</table>`:empty("NENHUMA PARTIDA ENCONTRADA");
+    $("pg").innerHTML=`<button class="btn" id="pp" ${pag<=1?"disabled":""}>◄</button><span>PÁG ${pag}/${pags} // ${r.paginacao.total} PARTIDA(S)</span><button class="btn" id="pn" ${pag>=pags?"disabled":""}>►</button>`;
+    $("pp").onclick=()=>loadRec(pag-1);$("pn").onclick=()=>loadRec(pag+1);
+    $("rec").querySelectorAll("tr.cl").forEach(e=>e.onclick=()=>openPartida(e.dataset.p));
+  }catch(e){if(!isErr(e))$("rec").innerHTML=empty("FALHA: "+esc(e.message))}
+}
+async function openPartida(id){
+  id=String(id).replace(/\D/g,"");if(!id)return;
+  try{
+    const p=await api("/partidas/"+id),b=p.bomba||{},pz=b.puzzles||{},J=p.jogadores||{},D=p.dispositivos||{};
+    const dt=x=>x?new Date(x).toLocaleString("pt-BR"):"--",ms=p.startedAt&&p.finishedAt?new Date(p.finishedAt)-new Date(p.startedAt):null;
+    const ln=(k,v)=>`<tr><td style="color:var(--muted)">${k}</td><td style="color:#eaf3ea">${v}</td></tr>`;
+    const pl=r=>esc(J[r]?.nome||"--")+" (id "+esc(J[r]?.id??"--")+")";
+    const f=pz.fios?.fios;
+    $("pmb").innerHTML=`<div class="pc" style="color:var(--terminal)">PARTIDA #${p._id} // ${esc(p.uuid||"sem uuid")}</div><h2>${tag(p.estado)} ${resTag(p.resultado)}</h2><table style="margin-top:14px">${ln("EDE",pl("EDE"))+ln("EIT",pl("EIT"))+ln("DURAÇÃO",dur(ms))+ln("CRIADA",dt(p.createdAt))+ln("INÍCIO",dt(p.startedAt))+ln("FIM",dt(p.finishedAt))+ln("ERROS",b.erros??"--")+ln("Nº DE SÉRIE",esc(b.numeroDeSerie||"--"))+ln("DISPOSITIVOS","bomba "+(D.bomba?.conectado?"✔":"✘")+" // unity "+(D.unity?.conectado?"✔":"✘"))}</table><div class="pc" style="margin:16px 0 10px">MÓDULOS</div>${Object.keys(PUZ).map(k=>hbar(PUZ[k],pz[k]?.resolvido?1:0,pz[k]?.resolvido?"OK":"--",pz[k]?.resolvido?"":"bad")).join("")}${f?`<div class="pc" style="margin:10px 0 6px">FIOS (${pz.fios.numeroDeFios})</div><div style="font-size:11px;color:#b4c2b5">${Array.isArray(f)?f.map(x=>esc((x.posicao??"?")+"="+(x.cor??JSON.stringify(x)))).join(" · "):esc(JSON.stringify(f))}</div>`:""}<button class="btn" id="pmx" style="margin-top:18px">[ FECHAR ]</button>`;
+    $("pm").classList.add("v");$("pmx").onclick=()=>$("pm").classList.remove("v");
+  }catch(e){if(!isErr(e)){$("err").style.display="block";$("err").textContent="Partida #"+id+": "+e.message}}
 }
 function insights(r,dia,p,e,j){
   const l=[];
@@ -280,12 +343,12 @@ let loading=false;
 async function load(){
   if(loading||!validToken())return;
   loading=true;status("CARREGANDO...");$("err").style.display="none";
-  const q={de:$("de").value,ate:$("ate").value};
-  const jobs=[api("/stats/resumo",q),api("/stats/por-dia",q),api("/stats/puzzles",q),api("/stats/erros",q),api("/stats/jogadores",{...q,limite:10}),api("/partidas",{...q,limite:8})];
+  const q={de:$("de").value,ate:$("ate").value,jogador:foco};
+  const jobs=[api("/stats/resumo",q),api("/stats/por-dia",q),api("/stats/puzzles",q),api("/stats/erros",q),api("/stats/jogadores",{de:q.de,ate:q.ate,limite:10}),api("/stats/recordes",q)];
   const res=await Promise.allSettled(jobs),v=res.map(r=>r.status==="fulfilled"?r.value:null);
   const bad=res.filter(r=>r.status==="rejected"&&!["login","auth"].includes(r.reason?.message));
   if(bad.length){$("err").style.display="block";$("err").textContent="Falha ao carregar parte dos dados: "+bad.map(b=>b.reason.message).join(" | ")}
-  kpis(v[0]);$("dia").innerHTML=dayChart(v[1]?.dados);puzzles(v[2]);erros(v[3]);players(v[4]);recent(v[5]);insights(v[0],v[1],v[2],v[3],v[4]);
+  kpis(v[0]);$("dia").innerHTML=dayChart(v[1]?.dados);puzzles(v[2]);erros(v[3]);players(v[4]);records(v[5]);loadRec(pag);insights(v[0],v[1],v[2],v[3],v[4]);
   if(!res.some(r=>r.status==="rejected"&&["login","auth"].includes(r.reason?.message)))status("ONLINE // "+new Date().toLocaleTimeString("pt-BR",{hour12:false}));
   loading=false;
 }
@@ -296,8 +359,13 @@ document.querySelectorAll(".bar [data-d]").forEach(b=>b.onclick=()=>{
   const n=Number(b.dataset.d),f=d=>{const o=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return o.toISOString().slice(0,10)};
   $("de").value=n?f(new Date(Date.now()-(n-1)*864e5)):"";$("ate").value="";load();
 });
-["de","ate"].forEach(id=>$(id).onchange=()=>{document.querySelectorAll(".bar [data-d]").forEach(x=>x.classList.remove("on"));load()});
+["de","ate"].forEach(id=>$(id).onchange=()=>{pag=1;document.querySelectorAll(".bar [data-d]").forEach(x=>x.classList.remove("on"));load()});
 $("rf").onclick=()=>{$("jd").classList.remove("v");load()};
+$("se").innerHTML='<option value="">ESTADO: TODOS</option>'+ESTADOS.map(e=>`<option>${e}</option>`).join("");
+$("sb").onclick=()=>loadRec(1);$("sg").onclick=()=>openPartida($("sid").value);
+["se","sr","so","sl"].forEach(id=>$(id).onchange=()=>loadRec(1));
+$("sn").onkeydown=e=>{if(e.key==="Enter")loadRec(1)};$("sid").onkeydown=e=>{if(e.key==="Enter")openPartida($("sid").value)};
+$("pm").onclick=e=>{if(e.target===$("pm"))$("pm").classList.remove("v")};
 setInterval(()=>{if(document.visibilityState==="visible")load()},60e3);
 
 (async function init(){

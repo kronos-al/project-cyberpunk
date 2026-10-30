@@ -93,6 +93,15 @@ function construirFiltro(query, { estado = true, jogador = true } = {}) {
         ];
     }
 
+    // Busca por nome (parcial, sem diferenciar maiúsculas) em EDE ou EIT
+    if (jogador && query.nome && String(query.nome).trim()) {
+        const rx = new RegExp(String(query.nome).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+        filtro.$and = [
+            ...(filtro.$and || []),
+            { $or: [{ "jogadores.EDE.nome": rx }, { "jogadores.EIT.nome": rx }] },
+        ];
+    }
+
     if (query.de || query.ate) {
         filtro.createdAt = {};
 

@@ -428,4 +428,46 @@ router.get(
     })
 );
 
+// ==========================================
+// GET /stats/recordes
+// Partida mais rápida (vitória), pódio, mais rápida sem erros, vitória mais lenta
+// Query: de, ate, jogador
+// ==========================================
+
+router.get(
+    "/recordes",
+    handler(async (req, res) => {
+        const filtro = {
+            ...filtroFinalizadas(req.query),
+            startedAt: { $ne: null },
+            finishedAt: { $ne: null },
+        };
+        const proj = { jogadores: 1, resultado: 1, createdAt: 1, "bomba.erros": 1, duracaoMs: 1 };
+        const vit = { resultado: RESULTADO_VITORIA };
+
+        const [r] = await getDb()
+            .collection("partidas")
+            .aggregate([
+                { $match: filtro },
+                { $addFields: { duracaoMs } },
+                { $match: { duracaoMs: { $ne: null } } },
+                {
+                    $facet: {
+                        podio: [{ $match: vit }, { $sort: { duracaoMs: 1 } }, { $limit: 5 }, { $project: proj }],
+                        semErros: [{ $match: { ...vit, "bomba.erros": 0 } }, { $sort: { duracaoMs: 1 } }, { $limit: 1 }, { $project: proj }],
+                        lenta: [{ $match: vit }, { $sort: { duracaoMs: -1 } }, { $limit: 1 }, { $project: proj }],
+                    },
+                },
+            ])
+            .toArray();
+
+        res.json({
+            maisRapida: r.podio[0] || null,
+            podio: r.podio,
+            maisRapidaSemErros: r.semErros[0] || null,
+            maisLenta: r.lenta[0] || null,
+        });
+    })
+);
+
 module.exports = router;
