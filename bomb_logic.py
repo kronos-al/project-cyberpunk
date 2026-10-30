@@ -741,7 +741,7 @@ def processarTecladoPuzzle1():
         if partida.serialInput == partida.serialPassword:
 
             partida.puzzle1 = True
-            updateSucessLeds(2, True)
+            updateSucessLeds(0, True)
             puzzleSolvedSound.play()
             blinkLCDCursor(False)
             updateScreenSerieLCD(
