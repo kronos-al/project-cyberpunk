@@ -47,4 +47,6 @@ app.get("/stats", (req, res) => {
     );
 });
 
+app.use("/icon", express.static(path.join(__dirname, "frontend", "icon")));
+
 module.exports = { app, httpServer};
