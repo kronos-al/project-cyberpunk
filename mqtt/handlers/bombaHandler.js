@@ -87,20 +87,20 @@ async function handleBombaMessage(topic, dados, mqttClient) {
                 }
             );
 
-            // Mensagem duplicada da bomba: outra já finalizou a partida.
-            // Evita creditar os jogadores duas vezes.
-            if (fim.modifiedCount === 0) {
-                console.error(
-                    `Partida ${idPartida} já foi finalizada.`
-                );
-                return;
-            }
+            // // Mensagem duplicada da bomba: outra já finalizou a partida.
+            // // Evita creditar os jogadores duas vezes.
+            // if (fim.modifiedCount === 0) {
+            //     console.error(
+            //         `Partida ${idPartida} já foi finalizada.`
+            //     );
+            //     return;
+            // }
  
-            // ==========================================
-            // CREDITAR JOGADORES (Feira de Jogos)
-            // Roda em paralelo com as mensagens abaixo e nunca lança erro.
-            // ==========================================
-            creditarPartida(db, idPartida, partida.jogadores, value.dados);
+            // // ==========================================
+            // // CREDITAR JOGADORES (Feira de Jogos)
+            // // Roda em paralelo com as mensagens abaixo e nunca lança erro.
+            // // ==========================================
+            // creditarPartida(db, idPartida, partida.jogadores, value.dados);
 
             const dadosUnity = {
                 idPartida: idPartida,
