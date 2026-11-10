@@ -9,7 +9,7 @@ const { mqttClient } = require("../mqtt/mqtt-client.js");
 const { enviarEEsperarResposta } = require("../mqtt/mqtt-request.js");
 
 const { exigirOperador } = require("../middlewares/auth-operador.js");
-const { buscarUsuario, ErroFeira } = require("../utils/feira.js");
+const { buscarUsuario, ErroFeira } = require("../utils/getUsers.js");
 
 
 router.post("/postAddPlayer", exigirOperador, async (req, res) => {
