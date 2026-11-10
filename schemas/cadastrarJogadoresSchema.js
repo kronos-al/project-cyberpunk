@@ -1,5 +1,6 @@
 const Joi = require("joi");
 
+// A Unity só confirma o idPartida; os jogadores já foram salvos pelo postAddPlayer
 const cadastrarJogadoresSchema = Joi.object({
     estado: Joi.string()
         .valid("CADASTRAR_JOGADORES")
@@ -9,37 +10,8 @@ const cadastrarJogadoresSchema = Joi.object({
         idPartida: Joi.number()
             .integer()
             .positive()
-            .required(),
-
-        EDE: Joi.object({
-            id: Joi.number()
-                .integer()
-                .positive()
-                .required(),
-
-            nome: Joi.string()
-                .trim()
-                .min(1)
-                .max(100)
-                .required()
-        })
-        .required(),
-
-        EIT: Joi.object({
-            id: Joi.number()
-                .integer()
-                .positive()
-                .required(),
-
-            nome: Joi.string()
-                .trim()
-                .min(1)
-                .max(100)
-                .required()
-        })
-        .required()
-    })
-    .required()
+            .required()
+    }).required()
 });
 
 module.exports = cadastrarJogadoresSchema;

@@ -9,8 +9,20 @@ const addPlayersSchema = Joi.object({
         idPartida: Joi.number()
             .integer()
             .positive()
+            .required(),
+
+        // id do usuário (Feira de Jogos) que será o EDE
+        ede: Joi.number()
+            .integer()
+            .positive()
+            .required(),
+
+        // id do usuário (Feira de Jogos) que será o EIT (joga no manual)
+        eit: Joi.number()
+            .integer()
+            .positive()
             .required()
-    })
+    }).required()
 });
 
 module.exports = addPlayersSchema;

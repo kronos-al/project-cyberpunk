@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="BOMB.EXE — painel de administração da experiência física." />
   <title>BOMB.EXE // ADMIN</title>
+  <link rel="icon" type="image/x-icon" href="../icon/BOMB.EXE LOGO.png">
 
   <style>
     :root {
@@ -580,8 +581,30 @@
     .login-status { min-height: 18px; margin-top: 14px; color: var(--warning); font-size: 11px; line-height: 1.7; }
     .login-google { margin-top: 18px; min-height: 44px; }
 
+    .player-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 4px; }
+
+    input[type="text"] {
+      width: 100%;
+      min-height: 44px;
+      padding: 0 12px;
+      color: var(--terminal);
+      background: #07100b;
+      border: 1px solid rgba(141,255,117,.25);
+      outline: none;
+      font: inherit;
+      letter-spacing: .08em;
+    }
+
+    input[type="text"]::placeholder { color: #4f6353; letter-spacing: .05em; }
+    input[type="text"]:focus { border-color: var(--terminal); box-shadow: 0 0 0 2px rgba(141,255,117,.07); }
+    input[type="text"].invalid { border-color: var(--danger); box-shadow: 0 0 0 2px rgba(255,77,77,.08); }
+    input[type="text"]:disabled { opacity: .5; cursor: not-allowed; }
+
+    .field-hint { margin-top: 7px; color: var(--muted); font-size: 9px; letter-spacing: .06em; line-height: 1.5; }
+    .field-hint.bad { color: var(--danger); }
+
     @media (max-width: 900px) {
-      .dashboard, .layout { grid-template-columns: 1fr; }
+      .dashboard, .layout, .player-grid { grid-template-columns: 1fr; }
       .page-heading { grid-template-columns: 1fr; }
     }
 
@@ -693,9 +716,25 @@
           <div class="panel-code">AGUARDANDO AÇÃO</div>
         </div>
         <div class="panel-body">
-          <button class="btn" id="addPlayersBtn">[ ADICIONAR JOGADORES ]</button>
+          <div class="player-grid">
+            <div>
+              <label class="field-label" for="edeId">TÉCNICO DE DESARME // EDE</label>
+              <input type="text" id="edeId" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="ID DO USUÁRIO" />
+              <div class="field-hint" id="edeHint"></div>
+            </div>
+            <div>
+              <label class="field-label" for="eitId">TÉCNICO DO MANUAL // EIT</label>
+              <input type="text" id="eitId" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="ID DO USUÁRIO" />
+              <div class="field-hint" id="eitHint"></div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn" id="addPlayersBtn" disabled>[ ADICIONAR JOGADORES ]</button>
+          </div>
           <p class="helper">
-            Envia <code>POST /postAddPlayer</code> usando o ID da partida criada.
+            Envia <code>POST /postAddPlayer</code> com o ID da partida e os IDs dos dois técnicos.
+            O servidor confirma na Feira de Jogos se os dois usuários existem antes de liberar a entrada.
           </p>
         </div>
       </section>
@@ -825,6 +864,73 @@
     const confirmModal = document.getElementById("confirmModal");
     const configStage = document.getElementById("configStage");
     const playersStage = document.getElementById("playersStage");
+
+    // ---- IDs dos técnicos (EDE = desarme, EIT = manual) ----
+    const PLAYER_ID_RE = /^[1-9]\d{0,9}$/;
+    const PLAYER_HINT = "ID do usuário na Feira de Jogos (somente números).";
+    const edeInput = document.getElementById("edeId");
+    const eitInput = document.getElementById("eitId");
+    const edeHint = document.getElementById("edeHint");
+    const eitHint = document.getElementById("eitHint");
+
+    // Mantém só dígitos e remove zeros à esquerda
+    function sanitizePlayerInput(input) {
+      input.value = input.value.replace(/\D/g, "").replace(/^0+/, "");
+    }
+
+    // Validação silenciosa (não mexe na tela)
+    function playerIdsValid() {
+      return PLAYER_ID_RE.test(edeInput.value.trim()) && PLAYER_ID_RE.test(eitInput.value.trim());
+    }
+
+    function showPlayerFieldState(input, hint, showEmptyError) {
+      const value = input.value.trim();
+      const ok = PLAYER_ID_RE.test(value);
+      const message = !ok && showEmptyError ? "Informe o ID do usuário (número inteiro positivo)." : "";
+
+      input.classList.toggle("invalid", Boolean(message));
+      hint.textContent = message || PLAYER_HINT;
+      hint.classList.toggle("bad", Boolean(message));
+      return ok;
+    }
+
+    // Valida e devolve { ede, eit } como números, ou null. Com showErrors destaca os campos.
+    function validatePlayerIds(showErrors = false) {
+      const edeOk = showPlayerFieldState(edeInput, edeHint, showErrors);
+      const eitOk = showPlayerFieldState(eitInput, eitHint, showErrors);
+
+      if (!edeOk || !eitOk) {
+        if (showErrors) {
+          log("IDS INVALIDOS // informe o ID de usuário do EDE e do EIT (números inteiros positivos).", "warn");
+          (!edeOk ? edeInput : eitInput).focus();
+        }
+        return null;
+      }
+
+      const ede = Number(edeInput.value);
+      const eit = Number(eitInput.value);
+
+      if (!Number.isSafeInteger(ede) || !Number.isSafeInteger(eit) || ede < 1 || eit < 1) return null;
+      return { ede, eit };
+    }
+
+    function updatePlayersButton() {
+      addPlayersBtn.disabled = state.sendingPlayers || !state.playersStageVisible || !playerIdsValid();
+    }
+
+    function setPlayerInputsLocked(locked) {
+      edeInput.disabled = locked;
+      eitInput.disabled = locked;
+    }
+
+    function resetPlayerFields() {
+      edeInput.value = "";
+      eitInput.value = "";
+      setPlayerInputsLocked(false);
+      showPlayerFieldState(edeInput, edeHint, false);
+      showPlayerFieldState(eitInput, eitHint, false);
+      updatePlayersButton();
+    }
 
     function log(message, type = "") {
       const line = document.createElement("div");
@@ -1263,7 +1369,7 @@
       }
 
       if (!response.ok) {
-        const detail = typeof data === "string" ? data : JSON.stringify(data);
+        const detail = typeof data === "string" ? data : (data?.erro || JSON.stringify(data));
         throw new Error(`HTTP ${response.status}: ${detail || response.statusText}`);
       }
 
@@ -1283,7 +1389,7 @@
       state.sessionId += 1;
       state.sendingConfig = false;
       state.sendingPlayers = false;
-      addPlayersBtn.disabled = false;
+      resetPlayerFields();
       closeAdminSocket();
 
       configStage.classList.add("visible");
@@ -1527,7 +1633,8 @@
         state.configStageVisible = false;
         playersStage.classList.add("visible");
         state.playersStageVisible = true;
-        addPlayersBtn.disabled = false;
+        updatePlayersButton();
+        edeInput.focus();
 
         document.getElementById("matchState").textContent = "AGUARDANDO JOGADORES";
         document.getElementById("matchWires").textContent = `FIOS // ${String(payload.dados.numeroDeFios).padStart(2, "0")}`;
@@ -1556,14 +1663,21 @@
       if (!state.idPartida || !state.playersStageVisible) return;
       if (state.sendingPlayers) return;
 
+      // Garante no front que os dois IDs foram digitados e são válidos
+      const ids = validatePlayerIds(true);
+      if (!ids) return;
+
       const session = state.sessionId;
       const idPartida = state.idPartida;
       state.sendingPlayers = true;
+      setPlayerInputsLocked(true);
 
       const payload = {
         estado: "ADICIONAR_JOGADORES",
         dados: {
-          idPartida
+          idPartida,
+          ede: ids.ede,
+          eit: ids.eit
         }
       };
 
@@ -1584,15 +1698,17 @@
         }
 
         document.getElementById("matchState").textContent = "ADICIONAR JOGADORES";
-        document.getElementById("matchPlayers").textContent = "JOGADORES // LIBERADOS";
+        document.getElementById("matchPlayers").textContent = `EDE #${ids.ede} // EIT #${ids.eit}`;
         document.getElementById("lastAction").textContent = "PLAYERS OK";
         addPlayersBtn.disabled = true;
 
+        log(`Jogadores validados na Feira de Jogos: EDE #${ids.ede} e EIT #${ids.eit}.`, "good");
         log(`Entrada dos jogadores liberada para a partida #${idPartida}.`, "good");
         log("Estado recebido: ADICIONAR_JOGADORES.", "good");
       } catch (error) {
         if (session === state.sessionId) {
-          addPlayersBtn.disabled = false;
+          setPlayerInputsLocked(false);
+          updatePlayersButton();
           log(`FALHA AO ADICIONAR JOGADORES: ${error.message}`, "bad");
         } else {
           log(`Falha ignorada de /postAddPlayer da partida anterior: ${error.message}`, "warn");
@@ -1654,6 +1770,26 @@
 
     sendConfigBtn.addEventListener("click", sendConfig);
     addPlayersBtn.addEventListener("click", addPlayers);
+
+    [[edeInput, edeHint], [eitInput, eitHint]].forEach(([input, hint]) => {
+      input.addEventListener("input", () => {
+        sanitizePlayerInput(input);
+        showPlayerFieldState(input, hint, false);
+        updatePlayersButton();
+      });
+    });
+
+    edeInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") { event.preventDefault(); eitInput.focus(); }
+    });
+    eitInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        if (!addPlayersBtn.disabled) addPlayers();
+      }
+    });
+
+    resetPlayerFields();
 
     renderWireEditor();
     log("Admin carregado // aguardando criação de partida.", "good");

@@ -8,9 +8,12 @@ const { enviarEEsperarResposta } = require("../mqtt-request.js");
 async function handleUnityMessage(topic, dados, mqttClient) {
 
     if (dados.estado === "CADASTRAR_JOGADORES") {
+        // Fora do try para o catch conseguir usar no log
+        let idPartida;
+
         try {
             /*
-            * 1. Validar a mensagem recebida
+            * 1. Validar a mensagem recebida (agora só traz o idPartida)
             */
             const { error, value } =
                 cadastrarJogadoresSchema.validate(dados);
@@ -30,7 +33,7 @@ async function handleUnityMessage(topic, dados, mqttClient) {
             */
             const partes = topic.split("/");
 
-            const idPartida = Number(partes[1]);
+            idPartida = Number(partes[1]);
 
             /*
             * 3. Conferir idPartida do topic com o payload
@@ -63,64 +66,38 @@ async function handleUnityMessage(topic, dados, mqttClient) {
             */
             if (partida.estado !== "ADICIONAR_JOGADORES") {
                 console.error(
-                    `Partida ${idPartida} não está no estado "Adicionar Jogadores".`
+                    `Partida ${idPartida} não está no estado "ADICIONAR_JOGADORES".`
                 );
                 return;
             }
 
-            console.log(
-                `Cadastrando jogadores da partida ${idPartida}...`
-            );
-
-            console.log("EDE:", value.dados.EDE);
-            console.log("EIT:", value.dados.EIT);
-
             // ==========================================
-            // BLOQUEAR CADASTRAMENTO DE JOGADORES
+            // AVANÇAR A PARTIDA
+            // Os jogadores já foram salvos pelo postAddPlayer, então aqui
+            // só mudamos o estado. A guarda no filtro impede processar a
+            // mesma mensagem duas vezes.
             // ==========================================
 
-            const bloqueio = await db.collection("partidas").updateOne(
+            const avanco = await db.collection("partidas").updateOne(
                 {
                     _id: idPartida,
                     estado: "ADICIONAR_JOGADORES"
                 },
                 {
                     $set: {
-                        estado: "CADASTRANDO_JOGADORES"
-                    }
-                }
-            );
-
-            if (bloqueio.modifiedCount === 0) {
-
-                console.error(
-                    `Jogadores da partida ${idPartida} já estão sendo cadastrados ou já foram cadastrados.`
-                );
-
-                return;
-            }
-
-
-            // ==========================================
-            // CADASTRAR JOGADORES
-            // ==========================================
-
-            await db.collection("partidas").updateOne(
-                {
-                    _id: idPartida,
-                    estado: "CADASTRANDO_JOGADORES"
-                },
-                {
-                    $set: {
-                        "jogadores.EDE": value.dados.EDE,
-                        "jogadores.EIT": value.dados.EIT,
-
                         estado: "AGUARDANDO_INICIO_DA_PARTIDA"
                     }
                 }
             );
 
-            const respostaBomba = await enviarEEsperarResposta(
+            if (avanco.modifiedCount === 0) {
+                console.error(
+                    `Partida ${idPartida} já avançou do cadastro de jogadores.`
+                );
+                return;
+            }
+
+            const respostaUnity = await enviarEEsperarResposta(
                 mqttClient,
 
                 `bombexe/${idPartida}/server/unity`,
@@ -130,7 +107,7 @@ async function handleUnityMessage(topic, dados, mqttClient) {
                     dados: {
                         idPartida: idPartida
                     }
-                }, 
+                },
 
                 (topicRecebido, dadosRecebidos) => {
 
@@ -145,14 +122,19 @@ async function handleUnityMessage(topic, dados, mqttClient) {
                             idPartida
                     );
                 }, 15000, 10
-                );
+            );
+
+            console.log(
+                `Unity confirmou AGUARDANDO_INICIO_DA_PARTIDA da partida ${idPartida}:`,
+                respostaUnity
+            );
         } catch (error) {
             console.error(
-                `Erro ao cadastrar jogadores da partida ${idPartida}:`,
+                `Erro ao avançar jogadores da partida ${idPartida}:`,
                 error
             );
         }
-        
+
     }
 
     if (dados.estado === "COMECAR_PARTIDA") {
@@ -206,14 +188,14 @@ async function handleUnityMessage(topic, dados, mqttClient) {
             return;
         }
 
-         /*
+        /*
         * 5. Verificar se a partida está no estado correto
         */
         if (partida.estado !== "AGUARDANDO_INICIO_DA_PARTIDA") {
             console.error(
                 `Partida ${idPartida} não está no estado "AGUARDANDO_INICIO_DA_PARTIDA".`
             );
-            return; 
+            return;
         }
 
         await db.collection("partidas").updateOne(
@@ -227,71 +209,69 @@ async function handleUnityMessage(topic, dados, mqttClient) {
             }
         );
 
-            try {
+        try {
 
-                const respostaBomba = await enviarEEsperarResposta(
-                    mqttClient,
+            const respostaBomba = await enviarEEsperarResposta(
+                mqttClient,
 
-                    `bombexe/${idPartida}/server/bomba`,
+                `bombexe/${idPartida}/server/bomba`,
 
-                    {
-                        estado: "COMECAR_PARTIDA",
-                        dados: {
-                            idPartida: idPartida
-                        }
-                    },
-
-                    (topicRecebido, dadosRecebidos) => {
-
-                        return (
-                            topicRecebido ===
-                                `bombexe/${idPartida}/bomba/server` &&
-
-                            dadosRecebidos.estado ===
-                                "EM_PARTIDA" &&
-
-                            dadosRecebidos.dados?.idPartida ===
-                                idPartida &&
-
-                            typeof dadosRecebidos.dados?.numeroDeSerie ===
-                                "string" &&
-
-                            dadosRecebidos.dados.numeroDeSerie.trim().length > 0
-                        );
+                {
+                    estado: "COMECAR_PARTIDA",
+                    dados: {
+                        idPartida: idPartida
                     }
-                );
+                },
 
-                console.log(
-                    `Bomba confirmou o início da partida ${idPartida}:`,
-                    respostaBomba
-                );
+                (topicRecebido, dadosRecebidos) => {
 
-                await db.collection("partidas").updateOne(
-                    {
-                        _id: idPartida
-                    },
-                    {
-                        $set: {
-                            estado: "EM_PARTIDA",
-                            startedAt: new Date(),
-                            "bomba.numeroDeSerie":
-                                respostaBomba.dados.numeroDeSerie
-                        }
+                    return (
+                        topicRecebido ===
+                            `bombexe/${idPartida}/bomba/server` &&
+
+                        dadosRecebidos.estado ===
+                            "EM_PARTIDA" &&
+
+                        dadosRecebidos.dados?.idPartida ===
+                            idPartida &&
+
+                        typeof dadosRecebidos.dados?.numeroDeSerie ===
+                            "string" &&
+
+                        dadosRecebidos.dados.numeroDeSerie.trim().length > 0
+                    );
+                }
+            );
+
+            console.log(
+                `Bomba confirmou o início da partida ${idPartida}:`,
+                respostaBomba
+            );
+
+            await db.collection("partidas").updateOne(
+                {
+                    _id: idPartida
+                },
+                {
+                    $set: {
+                        estado: "EM_PARTIDA",
+                        startedAt: new Date(),
+                        "bomba.numeroDeSerie":
+                            respostaBomba.dados.numeroDeSerie
                     }
-                );
+                }
+            );
 
-            } catch (error) {
+        } catch (error) {
 
-                console.error(
-                    `Erro ao iniciar a partida ${idPartida}:`,
-                    error
-                );
+            console.error(
+                `Erro ao iniciar a partida ${idPartida}:`,
+                error
+            );
 
-            }
-
+        }
 
     }
-
 
 }
 
