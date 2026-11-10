@@ -89,8 +89,8 @@ class Partida:
         self.serialPassword = None
         self.serialInput = ""
 
-        self.tempoBomba = 300
-        self.tempoBombaFormatado = "0500"
+        self.tempoBomba = 360
+        self.tempoBombaFormatado = "0600"
 
         self.puzzle1 = False
         self.puzzle2 = False
@@ -570,8 +570,6 @@ def escolherFioCorreto():
     )
 
 def iniciarContagemBomba():
-
-    partida.tempoBomba = 300
     partida.timer_ativo = True
 
 
