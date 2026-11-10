@@ -2,6 +2,7 @@ const { getDb } = require("../../database/mongodb.js");
 const { enviarEEsperarResposta } = require("../mqtt-request.js");
 
 const fimDeJogoSchema = require("../../schemas/fimDeJogoSchema.js");
+const { creditarPartida } = require("../../utils/creditos.js");
 
 async function handleBombaMessage(topic, dados, mqttClient) {
     if (dados.estado === "FIM_DE_JOGO") {
@@ -85,6 +86,21 @@ async function handleBombaMessage(topic, dados, mqttClient) {
                     }
                 }
             );
+
+            // Mensagem duplicada da bomba: outra já finalizou a partida.
+            // Evita creditar os jogadores duas vezes.
+            if (fim.modifiedCount === 0) {
+                console.error(
+                    `Partida ${idPartida} já foi finalizada.`
+                );
+                return;
+            }
+ 
+            // ==========================================
+            // CREDITAR JOGADORES (Feira de Jogos)
+            // Roda em paralelo com as mensagens abaixo e nunca lança erro.
+            // ==========================================
+            creditarPartida(db, idPartida, partida.jogadores, value.dados);
 
             const dadosUnity = {
                 idPartida: idPartida,
