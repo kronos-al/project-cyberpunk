@@ -491,3 +491,34 @@ def lerFiosConectados(amostras: int = 5, intervalo: float = 0.01) -> set:
             time.sleep(intervalo)
 
     return conectados
+
+# ==========================================
+# EVENTOS DE CORTE DOS FIOS
+# ==========================================
+
+from threading import Lock
+
+_fiosCortados = set()
+_lockFiosCortados = Lock()
+
+
+def _aoCortarFio(posicao):
+    """Registra o corte detectado pelo evento do GPIO."""
+    with _lockFiosCortados:
+        _fiosCortados.add(posicao)
+
+
+# Registra os callbacks uma única vez.
+for posicao, entrada in _entradasFios.items():
+    entrada.when_deactivated = (
+        lambda pos=posicao: _aoCortarFio(pos)
+    )
+
+
+def obterFiosCortados():
+    """Retorna e limpa os cortes registrados, sem polling ou sleep."""
+    with _lockFiosCortados:
+        cortados = _fiosCortados.copy()
+        _fiosCortados.clear()
+
+    return cortados

@@ -9,7 +9,8 @@ from dataclasses import dataclass
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
 from physical_bomb_controller import (updateTimeClock, updateScreenSerieLCD, setSerieLCDEnabled,blinkLCDCursor,
                                       setupKeypad, readKeypad, updateFalhas, updatePuzzleLeds, processarTecladoVirtual,
-                                      verificarCliqueBotaoPuzzleLeds, setGPIO6, updateSucessLeds, lerFiosConectados)
+                                      verificarCliqueBotaoPuzzleLeds, setGPIO6, updateSucessLeds, lerFiosConectados,
+                                      obterFiosCortados)
 
 
 
@@ -235,10 +236,12 @@ def on_mqtt_message(client, msg):
 
             if faltando:
                 print(f"[FIOS] Configuração recusada: ligue os fios nas posições {faltando}.")
+                puzzleFail.play()
                 return
 
             if sobrando:
                 print(f"[FIOS] Configuração recusada: há fios ligados fora da configuração: {sobrando}")
+                puzzleFail.play()
                 return
 
             partida.numeroDeFios = int(dados["dados"]["numeroDeFios"])
@@ -935,6 +938,47 @@ def loopPartida(client):
                     partida.falhas += 1  # Incrementa contagem de erros
                     updateFalhas(partida.falhas)
 
+        # ==========================================
+        # PUZZLE 4 - FIOS
+        # ==========================================
+
+        if not partida.puzzleFios:
+
+            fiosCortados = obterFiosCortados()
+
+            for posicao in sorted(fiosCortados):
+
+                print(f"[FIOS] Fio da posição {posicao} cortado.")
+
+                # Verifica se o fio cortado é o correto.
+                if posicao == int(partida.fioCorreto["posicao"]):
+
+                    print(
+                        f">>> FIO CORRETO! Posição {posicao}, "
+                        f"cor {partida.fioCorreto['cor']}. <<<"
+                    )
+
+                    partida.puzzleFios = True
+
+                    puzzleSolvedSound.play()
+
+                    print(">>> PUZZLE 4 CONCLUÍDO COM SUCESSO! <<<")
+
+                    break
+
+                else:
+
+                    print(
+                        f">>> FIO INCORRETO! Esperado: posição "
+                        f"{partida.fioCorreto['posicao']}. <<<"
+                    )
+
+                    partida.falhas += 1
+
+                    updateFalhas(partida.falhas)
+
+                    puzzleFail.play()
+
         if not partida.puzzleLabyrinth:
             processarTecladoVirtual()
 
@@ -945,9 +989,10 @@ def loopPartida(client):
         # ==========================================
 
         if (
-            partida.puzzleSerial
-            and partida.PuzzleLeds
-            and partida.puzzleLabyrinth
+                partida.puzzleSerial
+                and partida.PuzzleLeds
+                and partida.puzzleFios
+                and partida.puzzleLabyrinth
         ):
             partida.vitoria = True
             partida.estado = "VITORIA"
