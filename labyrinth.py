@@ -367,6 +367,7 @@ def executarJogo():
                         playerDirection = "esquerda"
 
                     elif event.key == pygame.K_RIGHT:
+                        print("[LABIRINTO] Evento pygame.K_RIGHT recebido!")
                         moverPlayer("direita")
                         playerDirection = "direita"
 

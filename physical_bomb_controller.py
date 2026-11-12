@@ -332,12 +332,6 @@ def processarTecladoVirtual():
         tensao_atual = _canal_ads.voltage
 
         botao_atual = _identificar_botao(tensao_atual)
-        print(
-            f"[DEBUG TECLADO] "
-            f"Tensão: {tensao_atual:.3f} V | "
-            f"Botão identificado: {botao_atual!r} | "
-            f"Botão anterior: {_botao_anterior!r}"
-        )
 
         # Detecta o momento exato em que um novo botão é pressionado (Borda de Subida)
         if botao_atual and botao_atual != _botao_anterior:
