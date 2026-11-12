@@ -8,6 +8,16 @@ const DEBUG = true;
 const log = (...args) => DEBUG && console.log("[CREDITOS]", ...args);
 
 // ==========================================
+// RELÓGIO DA BOMBA
+// A bomba informa em "tempo" quantos segundos SOBRARAM (contagem regressiva),
+// e não quanto durou a partida. Duração = TEMPO_TOTAL_SEGUNDOS - tempo.
+// TEMPO TOTAL DA BOMBA, em segundos (360 = 6:00).
+// Mudou o tempo da bomba? Altere AQUI e reinicie o serviço.
+// ==========================================
+const TEMPO_TOTAL_SEGUNDOS = 360;
+const TEMPO_INFORMADO_E_RESTANTE = true;
+
+// ==========================================
 // TABELA DE PREMIAÇÃO (TJL)
 // Cada faixa vai "até" X segundos; valores = [0 erros, 1 erro, 2 erros]
 // ==========================================
@@ -18,6 +28,36 @@ const FAIXAS = [
     { ate: 300, valores: [350, 300, 300] },        // 4min01s a 5min
     { ate: Infinity, valores: [300, 250, 200] }    // acima de 5min
 ];
+
+/**
+ * Converte o "tempo" informado pela bomba em segundos DECORRIDOS.
+ * Ausente/inválido vira Infinity (pior caso).
+ */
+function tempoDecorrido(tempo) {
+    // Aceita número ou texto numérico ("120")
+    const bruto = (tempo === null || tempo === undefined || tempo === "") ? NaN : Number(tempo);
+
+    if (!Number.isFinite(bruto)) {
+        log(`AVISO: tempo inválido (${tempo}); usando a faixa mais lenta`);
+        return Infinity;
+    }
+
+    if (bruto > 3600) {
+        log(`AVISO: tempo = ${bruto}; parece estar em milissegundos, não em segundos`);
+    }
+
+    if (TEMPO_INFORMADO_E_RESTANTE && bruto > TEMPO_TOTAL_SEGUNDOS) {
+        log(`AVISO: tempo restante (${bruto}s) maior que TEMPO_TOTAL_SEGUNDOS (${TEMPO_TOTAL_SEGUNDOS}s); confira a constante`);
+    }
+
+    const decorrido = TEMPO_INFORMADO_E_RESTANTE
+        ? Math.max(0, TEMPO_TOTAL_SEGUNDOS - bruto)
+        : bruto;
+
+    log(`tempo informado = ${bruto}s (${TEMPO_INFORMADO_E_RESTANTE ? "restante" : "decorrido"}) -> duração = ${decorrido}s`);
+
+    return decorrido;
+}
 
 /**
  * Valor (TJL) que CADA jogador recebe.
@@ -35,15 +75,7 @@ function calcularCreditos({ resultado, tempo, erros }) {
         return 0;
     }
 
-    // Aceita número ou texto numérico ("120"); ausente/inválido vira o pior caso
-    const bruto = (tempo === null || tempo === undefined || tempo === "") ? NaN : Number(tempo);
-    const segundos = Number.isFinite(bruto) ? bruto : Infinity;
-
-    if (!Number.isFinite(bruto)) {
-        log(`calcular - AVISO: tempo inválido (${tempo}); usando a faixa mais lenta`);
-    } else if (segundos > 3600) {
-        log(`calcular - AVISO: tempo = ${segundos}; parece estar em milissegundos, não em segundos`);
-    }
+    const segundos = tempoDecorrido(tempo);
 
     const faixa = FAIXAS.find((f) => segundos <= f.ate);
 
@@ -110,15 +142,12 @@ async function creditarPartida(db, idPartida, jogadores, dadosFim) {
 
         if (p?.startedAt && p?.finishedAt) {
             const real = Math.round((new Date(p.finishedAt) - new Date(p.startedAt)) / 1000);
-            const informado = Number(dadosFim?.tempo);
+            const decorrido = tempoDecorrido(dadosFim?.tempo);
 
-            log(`duração real (finishedAt - startedAt) = ${real}s | tempo informado pela bomba = ${informado}`);
+            log(`duração real (finishedAt - startedAt) = ${real}s | duração pelo relógio da bomba = ${decorrido}s`);
 
-            if (Number.isFinite(informado) && Math.abs(real - informado) > 10) {
-                log(
-                    "AVISO: o tempo da bomba difere muito da duração real.",
-                    "Pode ser tempo RESTANTE (e não decorrido), outra unidade ou atraso na mensagem."
-                );
+            if (Number.isFinite(decorrido) && Math.abs(real - decorrido) > 10) {
+                log("AVISO: relógio da bomba e duração real diferem mais de 10s; confira TEMPO_TOTAL_SEGUNDOS.");
             }
         } else {
             log("startedAt/finishedAt ausentes; não deu para comparar com a duração real.");
@@ -128,7 +157,7 @@ async function creditarPartida(db, idPartida, jogadores, dadosFim) {
     }
 
     const valor = calcularCreditos(dadosFim);
-    const creditos = { valor, EDE: null, EIT: null };
+    const creditos = { valor, tempoTotalUsado: TEMPO_TOTAL_SEGUNDOS, EDE: null, EIT: null };
 
     log(`valor final por jogador: ${valor} TJL`);
 
