@@ -221,7 +221,7 @@ def iniciarPartida(partida):
 
     objetivos = detectarObjetivos(chosenObjective)
 
-    partida.puzzle5 = False
+    partida.puzzleLabyrinth = False
     animacaoInicio = None
 
     partidaAtiva = True
@@ -291,7 +291,7 @@ def resetPartida():
 # ==========================================
 
 def moverPlayer(direcao):
-    if partidaAtual.puzzle5:
+    if partidaAtual.puzzleLabyrinth:
         return
 
     linha, coluna = playerPosition
@@ -372,16 +372,16 @@ def executarJogo():
 
                     elif event.key == pygame.K_RETURN:
                         if (
-                            not partidaAtual.puzzle5
+                            not partidaAtual.puzzleLabyrinth
                             and tuple(playerPosition) in objetivos
                         ):
-                            partidaAtual.puzzle5 = True
+                            partidaAtual.puzzleLabyrinth = True
                             updateSucessLeds(2, True)
                             puzzleSolvedSound.play()
                             animacaoInicio = pygame.time.get_ticks()
                             print("PUZZLE RESOLVIDO!")
 
-                        elif not partidaAtual.puzzle5:
+                        elif not partidaAtual.puzzleLabyrinth:
                             print("Você não está em um objetivo!")
 
         if partidaAtiva and partidaAtual is not None and partidaAtual.falhas < 3:
@@ -405,7 +405,7 @@ def executarJogo():
 
             fadeAlpha = 0
 
-            if partidaAtual.puzzle5:
+            if partidaAtual.puzzleLabyrinth:
                 tempoDecorrido = tempoAtual - animacaoInicio
 
                 progresso = min(
@@ -443,7 +443,7 @@ def executarJogo():
 
             gameScreen.blit(chosenObjective, (0, 0))
 
-            if partidaAtual.puzzle5:
+            if partidaAtual.puzzleLabyrinth:
                 blackOverlay = pygame.Surface((WIDTH, HEIGHT))
                 blackOverlay.fill((0, 0, 0))
                 blackOverlay.set_alpha(fadeAlpha)

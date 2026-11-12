@@ -357,16 +357,16 @@ def processarTecladoVirtual():
 
 # Instâncias globais de hardware
 _canal_potenciometro = None
-_botao_puzzle3 = None
+_botao_PuzzleLeds = None
 _estado_botao_anterior = False
 
 
-def inicializarHardwarePuzzle3(i2c_bus=None):
+def inicializarHardwarePuzzleLeds(i2c_bus=None):
     """
     Inicializa o potenciômetro no canal A1 do ADS1115 e
-    o botão físico do Puzzle 3 no GPIO 26.
+    o botão físico do PuzzleLeds no GPIO 26.
     """
-    global _canal_potenciometro, _botao_puzzle3
+    global _canal_potenciometro, _botao_pPuzzleLeds
     try:
         if i2c_bus is None:
             i2c_bus = busio.I2C(board.SCL, board.SDA)
@@ -377,13 +377,13 @@ def inicializarHardwarePuzzle3(i2c_bus=None):
         _canal_potenciometro = AnalogIn(ads, 1)
 
         # Botão no GPIO 26 (Configurado com pull-up interno padrão da gpiozero)
-        _botao_puzzle3 = Button(26, pull_up=True)
+        _botao_PuzzleLeds = Button(26, pull_up=True)
 
         print("[PUZZLE 3] Potenciômetro (A1) e Botão (GPIO 26) inicializados com sucesso.")
     except Exception as e:
         print(f"[PUZZLE 3] Erro ao inicializar hardware: {e}")
 
-inicializarHardwarePuzzle3(i2c)
+inicializarHardwarePuzzleLeds(i2c)
 
 def lerPotenciometroA1():
     """
@@ -403,7 +403,7 @@ def lerPotenciometroA1():
         return 0.0, 0
 
 
-def verificarCliqueBotaoPuzzle3():
+def verificarCliqueBotaoPuzzleLeds():
     """
     Função para chamar repetidamente dentro do loop principal/puzzle.
 
@@ -414,13 +414,13 @@ def verificarCliqueBotaoPuzzle3():
         - (tensao, porcentagem) se o botão foi clicado.
         - None se o botão não foi clicado nesta iteração.
     """
-    global _estado_botao_anterior, _botao_puzzle3
+    global _estado_botao_anterior, _botao_PuzzleLeds
 
-    if _botao_puzzle3 is None:
+    if _botao_PuzzleLeds is None:
         return None
 
     # Verifica se o botão está fisicamente pressionado
-    botao_pressionado = _botao_puzzle3.is_pressed
+    botao_pressionado = _botao_PuzzleLeds.is_pressed
 
     # Transição: pressionado agora, mas não estava pressionado na leitura anterior
     if botao_pressionado and not _estado_botao_anterior:

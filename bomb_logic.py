@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
 from physical_bomb_controller import (updateTimeClock, updateScreenSerieLCD, setSerieLCDEnabled,blinkLCDCursor,
                                       setupKeypad, readKeypad, updateFalhas, updatePuzzleLeds, processarTecladoVirtual,
-                                      verificarCliqueBotaoPuzzle3, setGPIO6, updateSucessLeds)
+                                      verificarCliqueBotaoPuzzleLeds, setGPIO6, updateSucessLeds)
 
 
 
@@ -92,11 +92,11 @@ class Partida:
         self.tempoBomba = 360
         self.tempoBombaFormatado = "0600"
 
-        self.puzzle1 = False
+        self.puzzleSerial = False
         self.puzzle2 = False
-        self.puzzle3 = False
-        self.puzzle4 = False
-        self.puzzle5 = False
+        self.PuzzleLeds = False
+        self.puzzleFios = False
+        self.puzzleLabyrinth = False
 
         self.vitoria = False
         self.derrota = False
@@ -665,13 +665,13 @@ def iniciarBeepBomba():
 # PUZZLE 1 - ENTRADA DA SENHA PELO TECLADO
 # ==========================================
 
-def processarTecladoPuzzle1():
+def processarTecladopuzzleSerial():
     # Só permite digitar durante uma partida ativa
     if partida.estado != "EM_PARTIDA":
         return
 
     # Não aceita mais entradas depois de resolver o puzzle
-    if partida.puzzle1:
+    if partida.puzzleSerial:
         return
 
     tecla = readKeypad()
@@ -734,7 +734,7 @@ def processarTecladoPuzzle1():
         # Verifica se a senha digitada está correta
         if partida.serialInput == partida.serialPassword:
 
-            partida.puzzle1 = True
+            partida.puzzleSerial = True
             updateSucessLeds(0, True)
             puzzleSolvedSound.play()
             blinkLCDCursor(False)
@@ -850,11 +850,11 @@ def loopPartida(client):
                     "tempo": partida.tempoBomba,
                     "resultado": "DERROTA",
                     "puzzles": {
-                        "chaveDeInicializacao": partida.puzzle1,
+                        "chaveDeInicializacao": partida.puzzleSerial,
                         "ajusteDeSintonizacao": partida.puzzle2,
-                        "bussolaDeLeds": partida.puzzle3,
-                        "fios": partida.puzzle4,
-                        "labirinto": partida.puzzle5
+                        "bussolaDeLeds": partida.PuzzleLeds,
+                        "fios": partida.puzzleFios,
+                        "labirinto": partida.puzzleLabyrinth
                         }
                 }
             }
@@ -877,15 +877,15 @@ def loopPartida(client):
         # PUZZLE 1 - CHAVE DE INICIALIZAÇÃO
         # ==========================================
 
-        if not partida.puzzle1:
-            processarTecladoPuzzle1()
+        if not partida.puzzleSerial:
+            processarTecladopuzzleSerial()
             # ==========================================
             # PUZZLE 3 - BÚSSOLA DE LEDS / SINTONIZAÇÃO
             # ==========================================
 
-        if not partida.puzzle3:
+        if not partida.PuzzleLeds:
             # Verifica se o botão do GPIO 26 foi clicado
-            leitura_clique = verificarCliqueBotaoPuzzle3()
+            leitura_clique = verificarCliqueBotaoPuzzleLeds()
 
             if leitura_clique is not None:
                 tensao_pot, porcentagem_pot = leitura_clique
@@ -900,7 +900,7 @@ def loopPartida(client):
                 if sucesso:
                     print(">>> PUZZLE 3 CONCLUÍDO COM SUCESSO! <<<")
                     puzzleSolvedSound.play()
-                    partida.puzzle3 = True
+                    partida.PuzzleLeds = True
                     updateSucessLeds(1, True)
 
                 else:
@@ -909,7 +909,7 @@ def loopPartida(client):
                     partida.falhas += 1  # Incrementa contagem de erros
                     updateFalhas(partida.falhas)
 
-        if not partida.puzzle5:
+        if not partida.puzzleLabyrinth:
             processarTecladoVirtual()
 
 
@@ -919,9 +919,9 @@ def loopPartida(client):
         # ==========================================
 
         if (
-            partida.puzzle1
-            and partida.puzzle3
-            and partida.puzzle5
+            partida.puzzleSerial
+            and partida.PuzzleLeds
+            and partida.puzzleLabyrinth
         ):
             partida.vitoria = True
             partida.estado = "VITORIA"
@@ -943,11 +943,11 @@ def loopPartida(client):
                     "tempo": partida.tempoBomba,
                     "resultado": "VITORIA",
                     "puzzles": {
-                        "chaveDeInicializacao": partida.puzzle1,
+                        "chaveDeInicializacao": partida.puzzleSerial,
                         "ajusteDeSintonizacao": partida.puzzle2,
-                        "bussolaDeLeds": partida.puzzle3,
-                        "fios": partida.puzzle4,
-                        "labirinto": partida.puzzle5
+                        "bussolaDeLeds": partida.PuzzleLeds,
+                        "fios": partida.puzzleFios,
+                        "labirinto": partida.puzzleLabyrinth
                     }
                 }
             }
