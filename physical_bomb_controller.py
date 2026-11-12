@@ -366,7 +366,7 @@ def inicializarHardwarePuzzleLeds(i2c_bus=None):
     Inicializa o potenciômetro no canal A1 do ADS1115 e
     o botão físico do PuzzleLeds no GPIO 26.
     """
-    global _canal_potenciometro, _botao_pPuzzleLeds
+    global _canal_potenciometro, _botao_PuzzleLeds
     try:
         if i2c_bus is None:
             i2c_bus = busio.I2C(board.SCL, board.SDA)
