@@ -491,7 +491,6 @@ def lerFiosConectados(amostras: int = 5, intervalo: float = 0.01) -> set:
             time.sleep(intervalo)
 
     return conectados
-
 # ==========================================
 # EVENTOS DE CORTE DOS FIOS
 # ==========================================
@@ -499,26 +498,104 @@ def lerFiosConectados(amostras: int = 5, intervalo: float = 0.01) -> set:
 from threading import Lock
 
 _fiosCortados = set()
+_fiosMonitorados = set()
 _lockFiosCortados = Lock()
+_monitoramentoFiosAtivo = False
 
 
 def _aoCortarFio(posicao):
-    """Registra o corte detectado pelo evento do GPIO."""
+    """Callback executado quando um fio é cortado."""
+
     with _lockFiosCortados:
-        _fiosCortados.add(posicao)
+        if (
+            _monitoramentoFiosAtivo
+            and posicao in _fiosMonitorados
+        ):
+            _fiosCortados.add(posicao)
 
 
-# Registra os callbacks uma única vez.
-for posicao, entrada in _entradasFios.items():
-    entrada.when_deactivated = (
-        lambda pos=posicao: _aoCortarFio(pos)
+def iniciarMonitoramentoFios(posicoes):
+    """
+    Inicia o monitoramento somente dos fios configurados
+    para a partida atual.
+    """
+
+    global _fiosMonitorados
+    global _fiosCortados
+    global _monitoramentoFiosAtivo
+
+    posicoes = {int(pos) for pos in posicoes}
+
+    # Desativa qualquer monitoramento anterior.
+    with _lockFiosCortados:
+        _monitoramentoFiosAtivo = False
+        _fiosMonitorados.clear()
+        _fiosCortados.clear()
+
+    # Remove callbacks anteriores.
+    for entrada in _entradasFios.values():
+        entrada.when_deactivated = None
+
+    # Confere se todos os fios necessários continuam conectados.
+    desconectados = {
+        posicao
+        for posicao in posicoes
+        if not _entradasFios[posicao].is_active
+    }
+
+    if desconectados:
+        print(
+            f"[FIOS] ERRO: fios desconectados ao iniciar: "
+            f"{sorted(desconectados)}"
+        )
+        return False
+
+    # Registra os callbacks apenas nos fios da partida.
+    for posicao in posicoes:
+        _entradasFios[posicao].when_deactivated = (
+            lambda pos=posicao: _aoCortarFio(pos)
+        )
+
+    # Ativa o monitoramento e limpa novamente os eventos.
+    with _lockFiosCortados:
+        _fiosCortados.clear()
+        _fiosMonitorados = posicoes.copy()
+        _monitoramentoFiosAtivo = True
+
+        # Detecta também algum corte ocorrido durante a configuração.
+        for posicao in posicoes:
+            if not _entradasFios[posicao].is_active:
+                _fiosCortados.add(posicao)
+
+    print(
+        f"[FIOS] Monitoramento iniciado. "
+        f"Posições: {sorted(posicoes)}"
     )
+
+    return True
 
 
 def obterFiosCortados():
-    """Retorna e limpa os cortes registrados, sem polling ou sleep."""
+    """Retorna e limpa os eventos pendentes, sem polling ou sleep."""
+
     with _lockFiosCortados:
         cortados = _fiosCortados.copy()
         _fiosCortados.clear()
 
     return cortados
+
+
+def encerrarMonitoramentoFios():
+    """Encerra o monitoramento dos fios."""
+
+    global _monitoramentoFiosAtivo
+
+    with _lockFiosCortados:
+        _monitoramentoFiosAtivo = False
+        _fiosMonitorados.clear()
+        _fiosCortados.clear()
+
+    for entrada in _entradasFios.values():
+        entrada.when_deactivated = None
+
+    print("[FIOS] Monitoramento encerrado.")

@@ -10,7 +10,9 @@ from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSch
 from physical_bomb_controller import (updateTimeClock, updateScreenSerieLCD, setSerieLCDEnabled,blinkLCDCursor,
                                       setupKeypad, readKeypad, updateFalhas, updatePuzzleLeds, processarTecladoVirtual,
                                       verificarCliqueBotaoPuzzleLeds, setGPIO6, updateSucessLeds, lerFiosConectados,
-                                      obterFiosCortados)
+                                      iniciarMonitoramentoFios,
+                                      obterFiosCortados,
+                                      encerrarMonitoramentoFios)
 
 
 
@@ -301,6 +303,16 @@ def on_mqtt_message(client, msg):
                 f"Fio correto: posição {partida.fioCorreto['posicao']}, "
                 f"cor {partida.fioCorreto['cor']}"
             )
+
+            # INICIAR MONITORAMENTO DOS FIOS
+            posicoesFios = {
+                int(fio["posicao"])
+                for fio in partida.fios
+            }
+
+            if not iniciarMonitoramentoFios(posicoesFios):
+                print("[FIOS] Não foi possível iniciar o monitoramento.")
+                return
 
             # GERANDO LEDs e ligando - PUZZLE 3
             # Escolhe aleatoriamente uma das 8 configurações
@@ -894,6 +906,7 @@ def loopPartida(client):
                 qos=1
             )
             partida.timer_ativo = False
+            encerrarMonitoramentoFios()
             setGPIO6(False)
             partida.loop_ativo = False
             break
@@ -1030,6 +1043,7 @@ def loopPartida(client):
             )
             print("MQTT final enviado")
             partida.timer_ativo = False
+            encerrarMonitoramentoFios()
             setGPIO6(False)
             partida.loop_ativo = False
             break
