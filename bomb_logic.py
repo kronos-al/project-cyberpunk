@@ -238,7 +238,8 @@ def on_mqtt_message(client, msg):
                 return
 
             if sobrando:
-                print(f"[FIOS] AVISO: há fios ligados fora da configuração: {sobrando}")
+                print(f"[FIOS] Configuração recusada: há fios ligados fora da configuração: {sobrando}")
+                return
 
             partida.numeroDeFios = int(dados["dados"]["numeroDeFios"])
             partida.fios = fios
@@ -594,6 +595,7 @@ def escolherFioCorreto():
     )
 
 def iniciarContagemBomba():
+    partida.tempoBomba = 360
     partida.timer_ativo = True
 
 
