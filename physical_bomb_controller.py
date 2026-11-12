@@ -451,3 +451,43 @@ def setGPIO6(ligado: bool):
         gpio6.on()
     else:
         gpio6.off()
+
+# ==========================================
+# FIOS DO PUZZLE
+# Posição 1 = fio mais acima. Entradas com pull-up:
+# fio conectado = pino puxado para o GND = is_active True
+# ==========================================
+
+FIOS_GPIO = {
+    1: 7,    # CE1
+    2: 8,    # CE0
+    3: 11,   # SCLK
+    4: 9,    # MISO
+    5: 10,   # MOSI
+}
+
+_entradasFios = {
+    posicao: DigitalInputDevice(gpio, pull_up=True)
+    for posicao, gpio in FIOS_GPIO.items()
+}
+
+
+def lerFiosConectados(amostras: int = 5, intervalo: float = 0.01) -> set:
+    """
+    Retorna o conjunto de posições (1 a 5) com fio conectado.
+    Um fio só conta como conectado se TODAS as leituras concordarem,
+    o que evita falsos positivos por mau contato.
+    """
+    conectados = set(FIOS_GPIO)
+
+    for i in range(amostras):
+        conectados &= {
+            posicao
+            for posicao, entrada in _entradasFios.items()
+            if entrada.is_active
+        }
+
+        if i < amostras - 1:
+            time.sleep(intervalo)
+
+    return conectados

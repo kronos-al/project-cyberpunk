@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from schemas import AguardandoPartidaSchema, ConfigBombSchema, ComecarPartidaSchema
 from physical_bomb_controller import (updateTimeClock, updateScreenSerieLCD, setSerieLCDEnabled,blinkLCDCursor,
                                       setupKeypad, readKeypad, updateFalhas, updatePuzzleLeds, processarTecladoVirtual,
-                                      verificarCliqueBotaoPuzzleLeds, setGPIO6, updateSucessLeds)
+                                      verificarCliqueBotaoPuzzleLeds, setGPIO6, updateSucessLeds, lerFiosConectados)
 
 
 
@@ -216,8 +216,32 @@ def on_mqtt_message(client, msg):
             if partida.id != int(dados["dados"]["idPartida"]):
                 print("Partida inválida")
                 return
+            fios = dados["dados"]["fios"]
+
+            # ==========================================
+            # CONFERIR SE OS FIOS FÍSICOS ESTÃO LIGADOS
+            # ==========================================
+
+            posicoesNecessarias = {int(fio["posicao"]) for fio in fios}
+            conectados = lerFiosConectados()
+
+            faltando = sorted(posicoesNecessarias - conectados)
+            sobrando = sorted(conectados - posicoesNecessarias)
+
+            print(
+                f"[FIOS] Necessários: {sorted(posicoesNecessarias)} | "
+                f"Conectados: {sorted(conectados)}"
+            )
+
+            if faltando:
+                print(f"[FIOS] Configuração recusada: ligue os fios nas posições {faltando}.")
+                return
+
+            if sobrando:
+                print(f"[FIOS] AVISO: há fios ligados fora da configuração: {sobrando}")
+
             partida.numeroDeFios = int(dados["dados"]["numeroDeFios"])
-            partida.fios = dados["dados"]["fios"]
+            partida.fios = fios
 
             topico_resposta = f"bombexe/{partida.id}/bomba/server"
             mensagem_resposta = {
