@@ -611,7 +611,7 @@ _releExplosao = DigitalOutputDevice(13, initial_value=False)
 _explosaoEmAndamento = False
 _lockExplosao = threading.Lock()
 
-TEMPO_PULSO_RELE = 0.010        # 10 ms entre ligar e desligar
+TEMPO_PULSO_RELE = 0.10        # 100 ms entre ligar e desligar
 ATRASO_SEGUNDO_PULSO = 12.0     # segundos até o segundo clique
 
 
