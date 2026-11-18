@@ -880,6 +880,11 @@ def loopPartida(client):
 
             partida.estado = "DERROTA"
 
+            partida.timer_ativo = False
+            encerrarMonitoramentoFios()
+            setGPIO6(False)
+            explodirBomba()
+
             # ========================================
             # Responde para a partida
             # ========================================
@@ -908,10 +913,6 @@ def loopPartida(client):
                 json.dumps(mensagem_resposta),
                 qos=1
             )
-            partida.timer_ativo = False
-            encerrarMonitoramentoFios()
-            setGPIO6(False)
-            explodirBomba()
             partida.loop_ativo = False
             break
 
