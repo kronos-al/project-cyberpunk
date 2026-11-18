@@ -204,6 +204,7 @@ def on_mqtt_message(client, msg):
             updateSucessLeds(0, True)
             updateSucessLeds(1, True)
             updateSucessLeds(2, True)
+            updateSucessLeds(3, True)
             print(f"Publicado em: {topico_resposta}")
             print(f"Mensagem: {mensagem_resposta}")
 
@@ -329,6 +330,7 @@ def on_mqtt_message(client, msg):
             updateSucessLeds(0, False)
             updateSucessLeds(1, False)
             updateSucessLeds(2, False)
+            updateSucessLeds(3, False)
 
 
             # ==========================================
@@ -972,7 +974,7 @@ def loopPartida(client):
                     )
 
                     partida.puzzleFios = True
-
+                    updateSucessLeds(3, True)
                     puzzleSolvedSound.play()
 
                     print(">>> PUZZLE 4 CONCLUÍDO COM SUCESSO! <<<")
