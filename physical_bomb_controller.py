@@ -500,6 +500,7 @@ from threading import Lock
 
 _fiosCortados = set()
 _fiosMonitorados = set()
+_fiosJaCortados = set()      # <<< NOVO: fios que já geraram evento nesta partida
 _lockFiosCortados = Lock()
 _monitoramentoFiosAtivo = False
 
@@ -511,7 +512,9 @@ def _aoCortarFio(posicao):
         if (
             _monitoramentoFiosAtivo
             and posicao in _fiosMonitorados
+            and posicao not in _fiosJaCortados      # <<< NOVO: esquece fios já cortados
         ):
+            _fiosJaCortados.add(posicao)            # <<< NOVO
             _fiosCortados.add(posicao)
 
 
@@ -523,6 +526,7 @@ def iniciarMonitoramentoFios(posicoes):
 
     global _fiosMonitorados
     global _fiosCortados
+    global _fiosJaCortados          # <<< NOVO
     global _monitoramentoFiosAtivo
 
     posicoes = {int(pos) for pos in posicoes}
@@ -532,6 +536,7 @@ def iniciarMonitoramentoFios(posicoes):
         _monitoramentoFiosAtivo = False
         _fiosMonitorados.clear()
         _fiosCortados.clear()
+        _fiosJaCortados.clear()     # <<< NOVO
 
     # Remove callbacks anteriores.
     for entrada in _entradasFios.values():
@@ -560,6 +565,7 @@ def iniciarMonitoramentoFios(posicoes):
     # Ativa o monitoramento e limpa novamente os eventos.
     with _lockFiosCortados:
         _fiosCortados.clear()
+        _fiosJaCortados.clear()     # <<< NOVO
         _fiosMonitorados = posicoes.copy()
         _monitoramentoFiosAtivo = True
 
@@ -567,6 +573,7 @@ def iniciarMonitoramentoFios(posicoes):
         for posicao in posicoes:
             if not _entradasFios[posicao].is_active:
                 _fiosCortados.add(posicao)
+                _fiosJaCortados.add(posicao)    # <<< NOVO
 
     print(
         f"[FIOS] Monitoramento iniciado. "
@@ -595,6 +602,7 @@ def encerrarMonitoramentoFios():
         _monitoramentoFiosAtivo = False
         _fiosMonitorados.clear()
         _fiosCortados.clear()
+        _fiosJaCortados.clear()     # <<< NOVO
 
     for entrada in _entradasFios.values():
         entrada.when_deactivated = None
