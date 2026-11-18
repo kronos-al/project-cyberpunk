@@ -911,6 +911,7 @@ def loopPartida(client):
             partida.timer_ativo = False
             encerrarMonitoramentoFios()
             setGPIO6(False)
+            explodirBomba()
             partida.loop_ativo = False
             break
 
@@ -1048,7 +1049,6 @@ def loopPartida(client):
             partida.timer_ativo = False
             encerrarMonitoramentoFios()
             setGPIO6(False)
-            explodirBomba()
             partida.loop_ativo = False
             break
 
