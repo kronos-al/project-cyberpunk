@@ -10,6 +10,7 @@ import json
 import board
 import busio
 from adafruit_ht16k33 import segments
+import threading
 
 import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
@@ -599,3 +600,62 @@ def encerrarMonitoramentoFios():
         entrada.when_deactivated = None
 
     print("[FIOS] Monitoramento encerrado.")
+
+# ==========================================
+# EXPLOSÃO (RELÉ NO GPIO 13)
+# O relé curto-circuita um botão: um pulso curto
+# (liga/desliga) equivale a um "clique".
+# ==========================================
+
+_releExplosao = DigitalOutputDevice(13, initial_value=False)
+_explosaoEmAndamento = False
+_lockExplosao = threading.Lock()
+
+TEMPO_PULSO_RELE = 0.010        # 10 ms entre ligar e desligar
+ATRASO_SEGUNDO_PULSO = 12.0     # segundos até o segundo clique
+
+
+def _pulsoRele():
+    """Um clique no botão: liga o relé, espera 10 ms e desliga."""
+    _releExplosao.on()
+    time.sleep(TEMPO_PULSO_RELE)
+    _releExplosao.off()
+
+
+def _sequenciaExplosao():
+    global _explosaoEmAndamento
+
+    try:
+        print("[EXPLOSÃO] Primeiro pulso do relé.")
+        _pulsoRele()
+
+        time.sleep(ATRASO_SEGUNDO_PULSO)
+
+        print("[EXPLOSÃO] Segundo pulso do relé.")
+        _pulsoRele()
+    except Exception as e:
+        print(f"[EXPLOSÃO] Erro ao acionar o relé: {e}")
+        _releExplosao.off()
+    finally:
+        with _lockExplosao:
+            _explosaoEmAndamento = False
+
+
+def explodirBomba():
+    """
+    Dispara a sequência de explosão em uma thread própria:
+    pulso no relé, espera 12 s, pulso novamente.
+    Ignora chamadas repetidas enquanto a sequência está rodando.
+    """
+    global _explosaoEmAndamento
+
+    with _lockExplosao:
+        if _explosaoEmAndamento:
+            print("[EXPLOSÃO] Já em andamento, ignorando.")
+            return
+        _explosaoEmAndamento = True
+
+    threading.Thread(
+        target=_sequenciaExplosao,
+        daemon=True
+    ).start()

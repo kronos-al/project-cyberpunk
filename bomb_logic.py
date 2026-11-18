@@ -12,7 +12,8 @@ from physical_bomb_controller import (updateTimeClock, updateScreenSerieLCD, set
                                       verificarCliqueBotaoPuzzleLeds, setGPIO6, updateSucessLeds, lerFiosConectados,
                                       iniciarMonitoramentoFios,
                                       obterFiosCortados,
-                                      encerrarMonitoramentoFios)
+                                      encerrarMonitoramentoFios,
+                                      explodirBomba)
 
 
 
@@ -1047,6 +1048,7 @@ def loopPartida(client):
             partida.timer_ativo = False
             encerrarMonitoramentoFios()
             setGPIO6(False)
+            explodirBomba()
             partida.loop_ativo = False
             break
 
